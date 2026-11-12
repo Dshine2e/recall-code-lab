@@ -1,0 +1,219 @@
+{
+  "slug": "dfs",
+  "title": "DFS",
+  "category": "그래프",
+  "order": 2,
+  "summary": "한 갈래를 끝까지 따라간 뒤 되돌아오며 연결 요소·트리 정보·사이클을 찾아요",
+  "when": [
+    "연결 요소의 개수나 크기를 셀 때(격자의 덩어리 포함)",
+    "트리에서 부모·깊이·서브트리 크기처럼 자식 결과를 모아 부모를 계산할 때",
+    "방향 그래프에 사이클이 있는지 확인할 때",
+    "두 정점이 이어져 있는지(경로 존재)만 확인할 때",
+    "모든 경로·조합을 따라가 보는 백트래킹의 뼈대로"
+  ],
+  "topics": [
+    "DFS",
+    "연결 요소"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "재귀 DFS",
+        "signature": "def dfs(u):\n    visited[u] = True\n    for v in adj[u]:\n        if not visited[v]: dfs(v)",
+        "does": "이웃으로 끝까지 내려갔다가 돌아와요. 돌아온 뒤(후위)에 자식 결과를 합칠 수 있어요.",
+        "when": "트리 계산처럼 돌아오면서 처리할 게 있을 때",
+        "complexity": "O(V + E)"
+      },
+      {
+        "name": "sys.setrecursionlimit",
+        "signature": "sys.setrecursionlimit(10**6)",
+        "does": "재귀 깊이 한도(기본 1000)를 올려요. 실제 스택 크기를 늘려 주지는 않아요.",
+        "when": "재귀 깊이가 1000 을 넘을 수 있을 때",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "반복 DFS(리스트 스택)",
+        "signature": "st = [start]\nwhile st:\n    u = st.pop()",
+        "does": "list 의 append/pop 으로 스택을 만들어 재귀 없이 DFS 해요. 재귀 한도 걱정이 없어요.",
+        "when": "깊이가 아주 깊을 수 있을 때(경로 모양 그래프, 큰 격자)",
+        "complexity": "O(V + E), append/pop O(1)"
+      },
+      {
+        "name": "visited 배열",
+        "signature": "visited = [False] * (n + 1)",
+        "does": "정점마다 방문 여부를 저장해요. 정점이 1~n 이면 n + 1 칸이에요.",
+        "when": "항상",
+        "complexity": "O(V) 공간, 확인 O(1)"
+      },
+      {
+        "name": "색 3개(사이클 판별)",
+        "signature": "color = [0] * n  # 0 미방문, 1 탐색 중, 2 끝남",
+        "does": "탐색 중(1)인 정점으로 다시 오면 방향 그래프에 사이클이 있어요.",
+        "when": "방향 그래프 사이클 판별",
+        "complexity": "O(V + E)"
+      },
+      {
+        "name": "부모 인자로 트리 순회",
+        "signature": "def dfs(u, parent): for v in adj[u]: if v != parent: ...",
+        "does": "트리는 사이클이 없어서 visited 대신 부모만 피하면 돼요.",
+        "when": "무방향 트리에서 깊이·서브트리 크기를 구할 때",
+        "complexity": "O(N)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "반복 스택 DFS 로 연결 요소 세기",
+        "code": "import sys\n\ninput = sys.stdin.readline\nn, m = map(int, input().split())\nadj = [[] for _ in range(n + 1)]\nfor _ in range(m):\n    u, v = map(int, input().split())\n    adj[u].append(v)\n    adj[v].append(u)\n\nvisited = [False] * (n + 1)              # 정점 1~n\nsizes = []\nfor s in range(1, n + 1):\n    if visited[s]:\n        continue\n    visited[s] = True\n    st = [s]\n    cnt = 0\n    while st:\n        u = st.pop()\n        cnt += 1\n        for v in adj[u]:\n            if not visited[v]:\n                visited[v] = True\n                st.append(v)\n    sizes.append(cnt)\nprint(len(sizes))\nprint(*sizes)\n",
+        "stdin": "7 5\n1 2\n2 3\n4 5\n6 7\n5 4\n",
+        "output": "3\n3 2 2\n"
+      },
+      {
+        "title": "재귀 DFS 로 트리의 서브트리 크기와 깊이",
+        "code": "import sys\n\nsys.setrecursionlimit(10**6)             # 깊은 트리 대비\n\nn = 7\nedges = [(1, 2), (1, 3), (2, 4), (2, 5), (3, 6), (6, 7)]\nadj = [[] for _ in range(n + 1)]\nfor u, v in edges:\n    adj[u].append(v)\n    adj[v].append(u)\n\nsize = [0] * (n + 1)\ndepth = [0] * (n + 1)\n\n\ndef dfs(u, parent):\n    size[u] = 1\n    for v in adj[u]:\n        if v != parent:\n            depth[v] = depth[u] + 1\n            dfs(v, u)\n            size[u] += size[v]           # 자식이 끝난 뒤(후위) 합치기\n\n\ndfs(1, 0)\nfor u in range(1, n + 1):\n    print(u, size[u], depth[u])\n",
+        "output": "1 7 0\n2 3 1\n3 3 1\n4 1 2\n5 1 2\n6 2 2\n7 1 3\n"
+      },
+      {
+        "title": "방향 그래프 사이클 판별(색 3개)",
+        "code": "import sys\n\nsys.setrecursionlimit(10**6)\n\n\ndef has_cycle(n, edges):\n    adj = [[] for _ in range(n)]\n    for u, v in edges:\n        adj[u].append(v)\n    color = [0] * n                      # 0 미방문, 1 탐색 중, 2 끝남\n\n    def dfs(u):\n        color[u] = 1\n        for v in adj[u]:\n            if color[v] == 1:            # 탐색 중인 정점으로 돌아옴 → 사이클\n                return True\n            if color[v] == 0 and dfs(v):\n                return True\n        color[u] = 2\n        return False\n\n    return any(color[u] == 0 and dfs(u) for u in range(n))\n\n\nprint(has_cycle(4, [(0, 1), (1, 2), (2, 3)]))\nprint(has_cycle(4, [(0, 1), (1, 2), (2, 0), (2, 3)]))\nprint(has_cycle(3, [(0, 1), (0, 2), (1, 2)]))   # 길이 합쳐질 뿐 사이클은 아니에요\n",
+        "output": "False\nTrue\nFalse\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "def dfs(u):\n    ...\n    dfs(v)      # 경로 길이 2000 → RecursionError",
+        "right": "sys.setrecursionlimit(10**6)\n# 깊이가 10^5 이상이면 반복 스택 DFS",
+        "why": "Python 재귀 한도 기본값은 1000 이에요. 한도를 올려도 깊은 재귀는 느리고, 채점 환경에 따라 스택이 모자라 죽을 수 있어서 아주 깊으면 반복 DFS 가 안전해요."
+      },
+      {
+        "wrong": "st = [1]   # adj[1] = [2, 3, 4]\n# 꺼내는 순서: 1, 4, 3, 2",
+        "right": "for v in reversed(adj[u]):\n    st.append(v)   # 1, 2, 3, 4",
+        "why": "스택은 마지막에 넣은 것을 먼저 꺼내서 재귀 DFS 와 방문 순서가 반대예요. 방문 순서가 출력에 쓰이면 거꾸로 넣어요."
+      },
+      {
+        "wrong": "visited = [False] * n   # 정점이 1~n",
+        "right": "visited = [False] * (n + 1)",
+        "why": "정점 번호 n 에 접근하면 IndexError 가 나요. 반대로 음수 인덱스는 오류 없이 뒤에서부터 읽으니 0-based/1-based 를 처음에 정해요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "재귀 DFS 함수",
+        "signature": "void dfs(int u) { visited[u] = true; for (int v : adj[u]) if (!visited[v]) dfs(v); }",
+        "does": "이웃으로 끝까지 내려갔다가 돌아와요. 전역 adj/visited 와 함께 쓰는 게 간단해요.",
+        "when": "트리 계산, 연결 요소",
+        "complexity": "O(V + E)"
+      },
+      {
+        "name": "stack",
+        "signature": "stack<int> st; st.push(x); st.top(); st.pop();",
+        "does": "재귀 없이 DFS 할 때 쓰는 스택이에요. pop() 은 값을 돌려주지 않아요.",
+        "when": "깊이가 아주 깊을 수 있을 때",
+        "complexity": "push / top / pop O(1)"
+      },
+      {
+        "name": "람다 재귀(자기 자신 넘기기)",
+        "signature": "auto dfs = [&](auto&& self, int u) -> void { ... self(self, v); };\ndfs(dfs, 1);",
+        "does": "main 안에서 지역 변수를 캡처한 채 재귀해요(C++14 이상).",
+        "when": "전역 변수 없이 함수 안에 DFS 를 둘 때",
+        "complexity": "O(V + E)"
+      },
+      {
+        "name": "function 재귀",
+        "signature": "function<void(int)> dfs = [&](int u) { ... dfs(v); };",
+        "does": "타입을 미리 적어서 람다가 자기 이름을 부를 수 있어요. 호출이 약간 느려요.",
+        "when": "간단히 쓰고 싶을 때",
+        "complexity": "O(V + E)"
+      },
+      {
+        "name": "visited 벡터",
+        "signature": "vector<bool> visited(n + 1, false);",
+        "does": "방문 여부를 저장해요. 정점이 1~n 이면 n + 1 칸이에요.",
+        "when": "항상",
+        "complexity": "O(V) 공간"
+      },
+      {
+        "name": "색 3개(사이클 판별)",
+        "signature": "vector<int> color(n, 0);  // 0 미방문, 1 탐색 중, 2 끝남",
+        "does": "탐색 중인 정점으로 다시 오면 방향 그래프에 사이클이 있어요.",
+        "when": "방향 그래프 사이클 판별",
+        "complexity": "O(V + E)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "반복 스택 DFS 로 연결 요소 세기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n, m;\n    cin >> n >> m;\n    vector<vector<int>> adj(n + 1);\n    for (int i = 0; i < m; i++) {\n        int u, v;\n        cin >> u >> v;\n        adj[u].push_back(v);\n        adj[v].push_back(u);\n    }\n    vector<bool> visited(n + 1, false);    // 정점 1~n\n    vector<int> sizes;\n    for (int s = 1; s <= n; s++) {\n        if (visited[s]) continue;\n        visited[s] = true;\n        stack<int> st;\n        st.push(s);\n        int cnt = 0;\n        while (!st.empty()) {\n            int u = st.top();\n            st.pop();\n            cnt++;\n            for (int v : adj[u])\n                if (!visited[v]) {\n                    visited[v] = true;\n                    st.push(v);\n                }\n        }\n        sizes.push_back(cnt);\n    }\n    cout << sizes.size() << '\\n';\n    for (size_t i = 0; i < sizes.size(); i++) cout << sizes[i] << (i + 1 == sizes.size() ? '\\n' : ' ');\n    return 0;\n}\n",
+        "stdin": "7 5\n1 2\n2 3\n4 5\n6 7\n5 4\n",
+        "output": "3\n3 2 2\n"
+      },
+      {
+        "title": "재귀 DFS 로 트리의 서브트리 크기와 깊이",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nconst int MAXN = 8;\nvector<int> adj[MAXN];                    // 큰 배열은 전역에(지역 배열은 스택에 잡혀요)\nint sz[MAXN], dep[MAXN];\n\nvoid dfs(int u, int parent) {\n    sz[u] = 1;\n    for (int v : adj[u]) {\n        if (v == parent) continue;\n        dep[v] = dep[u] + 1;\n        dfs(v, u);\n        sz[u] += sz[v];                   // 자식이 끝난 뒤(후위) 합치기\n    }\n}\n\nint main() {\n    int n = 7;\n    vector<pair<int, int>> edges = {{1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {6, 7}};\n    for (auto [u, v] : edges) {\n        adj[u].push_back(v);\n        adj[v].push_back(u);\n    }\n    dfs(1, 0);\n    for (int u = 1; u <= n; u++) cout << u << ' ' << sz[u] << ' ' << dep[u] << '\\n';\n    return 0;\n}\n",
+        "output": "1 7 0\n2 3 1\n3 3 1\n4 1 2\n5 1 2\n6 2 2\n7 1 3\n"
+      },
+      {
+        "title": "방향 그래프 사이클 판별(색 3개, 람다 재귀)",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nbool has_cycle(int n, const vector<pair<int, int>>& edges) {\n    vector<vector<int>> adj(n);\n    for (auto [u, v] : edges) adj[u].push_back(v);\n    vector<int> color(n, 0);              // 0 미방문, 1 탐색 중, 2 끝남\n    auto dfs = [&](auto&& self, int u) -> bool {\n        color[u] = 1;\n        for (int v : adj[u]) {\n            if (color[v] == 1) return true;            // 탐색 중인 정점 → 사이클\n            if (color[v] == 0 && self(self, v)) return true;\n        }\n        color[u] = 2;\n        return false;\n    };\n    for (int u = 0; u < n; u++)\n        if (color[u] == 0 && dfs(dfs, u)) return true;\n    return false;\n}\n\nint main() {\n    cout << boolalpha;\n    cout << has_cycle(4, {{0, 1}, {1, 2}, {2, 3}}) << '\\n';\n    cout << has_cycle(4, {{0, 1}, {1, 2}, {2, 0}, {2, 3}}) << '\\n';\n    cout << has_cycle(3, {{0, 1}, {0, 2}, {1, 2}}) << '\\n';   // 합쳐질 뿐 사이클 아님\n    return 0;\n}\n",
+        "output": "false\ntrue\nfalse\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "auto dfs = [&](int u) { ... dfs(v); };",
+        "right": "auto dfs = [&](auto&& self, int u) -> void { ... self(self, v); };\ndfs(dfs, 1);",
+        "why": "auto 로 선언 중인 람다는 자기 이름을 쓸 수 없어서 컴파일 오류(use of 'dfs' before deduction of 'auto')가 나요. 자기 자신을 인자로 넘기거나 function<> 을 써요."
+      },
+      {
+        "wrong": "// 정점 10^6 개가 한 줄로 이어진 그래프\ndfs(1);",
+        "right": "stack<int> st; st.push(1);\nwhile (!st.empty()) { ... }",
+        "why": "재귀 깊이가 수십만 이상이면 채점 환경의 스택 크기(보통 1~8MB)를 넘어 런타임 오류가 날 수 있어요. 반복 DFS 는 힙 메모리를 써요."
+      },
+      {
+        "wrong": "int main() {\n    int visited[1000000];   // 지역 큰 배열\n}",
+        "right": "int visited[1000000];       // 전역\n// 또는 vector<int> visited(1000000);",
+        "why": "지역 배열은 스택에 잡혀서 4MB 배열이면 스택이 넘칠 수 있어요. 전역 배열이나 vector(힙)를 써요. 전역 배열은 0 으로 초기화돼요."
+      },
+      {
+        "wrong": "vector<vector<int>> adj(n);   // 정점이 1~n\nadj[n].push_back(v);",
+        "right": "vector<vector<int>> adj(n + 1);",
+        "why": "범위 밖 접근은 예외 없이 정의되지 않은 동작이라 엉뚱한 결과나 비정상 종료가 나요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "연결 요소 개수·크기, 도달 여부",
+      "use": "DFS 나 BFS 아무거나"
+    },
+    {
+      "situation": "최단 거리(간선 수)",
+      "use": "BFS. DFS 는 처음 찾은 경로가 최단이라는 보장이 없어요"
+    },
+    {
+      "situation": "트리에서 자식 결과로 부모 값 계산(서브트리 크기·합)",
+      "use": "재귀 DFS 의 후위 처리. 깊으면 반복 DFS 순서를 거꾸로 처리"
+    },
+    {
+      "situation": "Python 에서 깊이가 수천 이상",
+      "use": "setrecursionlimit, 10^5 이상이면 반복 스택 DFS"
+    },
+    {
+      "situation": "방향 그래프 사이클",
+      "use": "색 3개 DFS 또는 위상 정렬(위상 정렬 항목)"
+    },
+    {
+      "situation": "모든 경로·선택을 따라가 봐야 함",
+      "use": "백트래킹 DFS(완전탐색 항목)"
+    }
+  ],
+  "checklist": [
+    "재귀 깊이가 얼마까지 가능한가요(경로 모양 입력이면 N)?",
+    "Python: setrecursionlimit 를 넣었거나 반복 DFS 를 썼나요?",
+    "visited 크기가 정점 번호 범위와 맞나요(1-based 면 n + 1)?",
+    "무방향 그래프에서 간선을 양쪽에 넣었나요?",
+    "연결 안 된 그래프라면 모든 정점에서 시작해 보나요?",
+    "방문 순서가 답에 쓰이면 반복 DFS 의 순서가 재귀와 같은지 확인했나요?"
+  ]
+}

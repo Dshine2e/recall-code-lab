@@ -1,0 +1,223 @@
+{
+  "slug": "dp",
+  "title": "동적 계획법(DP)",
+  "category": "알고리즘",
+  "order": 4,
+  "summary": "작은 문제의 답을 표에 저장해 두고, 그것으로 큰 문제의 답을 만들어요",
+  "when": [
+    "경우의 수를 셀 때(답이 커서 10^9+7 로 나눈 나머지를 요구하는 경우가 많아요)",
+    "최솟값·최댓값을 구하는데 같은 부분 문제가 여러 번 반복될 때",
+    "물건을 고를지 말지 정하며 용량 안에서 가치를 최대로 할 때(배낭)",
+    "두 문자열·수열을 앞에서부터 맞춰 가며 비교할 때(LCS, LIS)",
+    "그리디 반례가 있고 완전탐색은 너무 많을 때"
+  ],
+  "topics": [
+    "DP",
+    "LIS"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "1차원 표",
+        "signature": "dp = [0] * (n + 1); dp[0] = 1",
+        "does": "dp[i] 에 크기 i 인 부분 문제의 답을 저장해요. 시작값(dp[0])을 먼저 정해요.",
+        "when": "상태가 하나의 수로 표현될 때",
+        "complexity": "상태 수 × 상태당 전이 수"
+      },
+      {
+        "name": "2차원 표",
+        "signature": "dp = [[0] * (m + 1) for _ in range(n + 1)]",
+        "does": "상태가 두 개(i, j)일 때 표를 만들어요. 행마다 새 리스트로 만들어요.",
+        "when": "두 수열 비교, (물건, 용량) 같은 상태",
+        "complexity": "O(N × M) 공간"
+      },
+      {
+        "name": "functools.lru_cache / cache",
+        "signature": "@functools.lru_cache(maxsize=None)\ndef f(i, j): ...",
+        "does": "같은 인자로 다시 부르면 저장해 둔 값을 돌려줘요(메모이제이션). 인자는 해시 가능해야 해요(list 안 됨).",
+        "when": "재귀식이 자연스럽고 필요한 상태만 계산하고 싶을 때",
+        "complexity": "상태 수 × 전이 수, 캐시 조회 평균 O(1)"
+      },
+      {
+        "name": "0/1 배낭 1차원",
+        "signature": "for w, v in items:\n    for c in range(W, w - 1, -1):\n        dp[c] = max(dp[c], dp[c - w] + v)",
+        "does": "용량을 큰 쪽부터 돌아서 같은 물건을 두 번 쓰지 않게 해요. 정방향이면 무한히 쓸 수 있는 배낭이 돼요.",
+        "when": "물건마다 한 번만 고를 때",
+        "complexity": "O(N × W)"
+      },
+      {
+        "name": "나머지 연산",
+        "signature": "MOD = 1_000_000_007\ndp[i] = (dp[i - 1] + dp[i - 2]) % MOD",
+        "does": "매 단계 나머지를 취해 수를 작게 유지해요. Python 은 오버플로는 없지만 큰 정수 연산이 느려져요.",
+        "when": "경우의 수를 나머지로 출력할 때",
+        "complexity": "O(1) (작은 수 기준)"
+      },
+      {
+        "name": "INF 초기화",
+        "signature": "INF = float('inf')  # 또는 10**18\ndp = [0] + [INF] * n",
+        "does": "최솟값 DP 에서 아직 못 만드는 상태를 표시해요.",
+        "when": "최솟값을 구할 때",
+        "complexity": "O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "반복문 순서로 '조합 수'와 '순서 있는 수' 나누기",
+        "code": "MOD = 1_000_000_007\ncoins = [1, 2, 5]\ntarget = 5\n\n# 순서 무관(조합): 동전이 바깥 반복\ncomb = [0] * (target + 1)\ncomb[0] = 1\nfor c in coins:\n    for x in range(c, target + 1):\n        comb[x] = (comb[x] + comb[x - c]) % MOD\n\n# 순서 있음(1+2 와 2+1 을 다르게): 금액이 바깥 반복\nseq = [0] * (target + 1)\nseq[0] = 1\nfor x in range(1, target + 1):\n    for c in coins:\n        if c <= x:\n            seq[x] = (seq[x] + seq[x - c]) % MOD\n\nprint(comb)\nprint(seq)\n",
+        "output": "[1, 1, 2, 2, 3, 4]\n[1, 1, 2, 3, 5, 9]\n"
+      },
+      {
+        "title": "0/1 배낭: 용량을 거꾸로 돌기",
+        "code": "items = [(3, 4), (4, 5), (2, 3)]   # (무게, 가치)\nW = 6\n\nonce = [0] * (W + 1)               # 물건마다 한 번만\nfor w, v in items:\n    for c in range(W, w - 1, -1):  # 큰 용량부터\n        once[c] = max(once[c], once[c - w] + v)\n\nmany = [0] * (W + 1)               # 같은 물건 여러 번 가능\nfor w, v in items:\n    for c in range(w, W + 1):      # 작은 용량부터\n        many[c] = max(many[c], many[c - w] + v)\n\nprint(once)\nprint(many)\n",
+        "output": "[0, 0, 3, 4, 5, 7, 8]\n[0, 0, 3, 4, 6, 7, 9]\n"
+      },
+      {
+        "title": "메모이제이션(lru_cache)과 바텀업 표: LCS 길이",
+        "code": "import sys\nfrom functools import lru_cache\n\nsys.setrecursionlimit(10**6)\na, b = \"GXTXAYB\", \"AGGTAB\"\n\n\n@lru_cache(maxsize=None)\ndef lcs(i, j):                     # a[i:], b[j:] 의 LCS 길이\n    if i == len(a) or j == len(b):\n        return 0\n    if a[i] == b[j]:\n        return lcs(i + 1, j + 1) + 1\n    return max(lcs(i + 1, j), lcs(i, j + 1))\n\n\nn, m = len(a), len(b)\ndp = [[0] * (m + 1) for _ in range(n + 1)]   # a[:i], b[:j] 의 LCS 길이\nfor i in range(1, n + 1):\n    for j in range(1, m + 1):\n        if a[i - 1] == b[j - 1]:\n            dp[i][j] = dp[i - 1][j - 1] + 1\n        else:\n            dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])\n\nprint(lcs(0, 0), dp[n][m])\n",
+        "output": "4 4\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "for c in range(w, W + 1):      # 0/1 배낭인데 정방향\n    dp[c] = max(dp[c], dp[c - w] + v)",
+        "right": "for c in range(W, w - 1, -1):\n    dp[c] = max(dp[c], dp[c - w] + v)",
+        "why": "정방향이면 이번 물건을 넣은 값을 같은 반복에서 또 써서 한 물건을 여러 번 넣어요. 무게 2, 가치 3 하나, W = 4 이면 정방향은 6, 역방향은 3 이에요."
+      },
+      {
+        "wrong": "@lru_cache(maxsize=None)\ndef f(n): return 0 if n == 0 else f(n - 1) + 1\nf(5000)   # RecursionError",
+        "right": "sys.setrecursionlimit(10**6)   # 또는 바텀업 반복문",
+        "why": "메모이제이션도 재귀라서 깊이 1000(기본 한도)을 넘으면 RecursionError 가 나요. 깊이가 크면 바텀업이 안전해요."
+      },
+      {
+        "wrong": "dp = [0] * (n + 1)   # 최솟값 DP\ndp[i] = min(dp[i], dp[i - c] + 1)   # 항상 0",
+        "right": "dp = [0] + [float('inf')] * n",
+        "why": "최솟값 DP 를 0 으로 채우면 min 이 계속 0 이에요. 못 만드는 상태는 INF 로 두고, 출력 전에 INF 인지 확인해요."
+      },
+      {
+        "wrong": "dp[i] = dp[i - 1] + dp[i - 2]\nprint(dp[n] % MOD)",
+        "right": "dp[i] = (dp[i - 1] + dp[i - 2]) % MOD",
+        "why": "Python 은 오버플로가 없어 답은 맞지만 수가 수천 자리로 커져 느려져요. C++ 은 오버플로로 틀려요. 매 단계 나머지를 취해요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "1차원 표",
+        "signature": "vector<long long> dp(n + 1, 0); dp[0] = 1;",
+        "does": "dp[i] 에 부분 문제의 답을 저장해요. 시작값을 먼저 정해요.",
+        "when": "상태가 하나의 수일 때",
+        "complexity": "상태 수 × 상태당 전이 수"
+      },
+      {
+        "name": "2차원 표",
+        "signature": "vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));",
+        "does": "상태가 두 개일 때 표를 만들어요. 크기가 고정이면 전역 배열도 좋아요(0 으로 초기화).",
+        "when": "두 수열 비교, (물건, 용량)",
+        "complexity": "O(N × M) 공간"
+      },
+      {
+        "name": "메모이제이션 + -1 표시",
+        "signature": "vector<vector<int>> memo(n, vector<int>(m, -1));\nif (memo[i][j] != -1) return memo[i][j];",
+        "does": "아직 계산 안 한 상태를 -1 로 표시하고, 계산한 값은 저장해 둬요.",
+        "when": "재귀식이 자연스러울 때",
+        "complexity": "상태 수 × 전이 수"
+      },
+      {
+        "name": "0/1 배낭 1차원",
+        "signature": "for (auto [w, v] : items)\n    for (int c = W; c >= w; c--)\n        dp[c] = max(dp[c], dp[c - w] + v);",
+        "does": "용량을 큰 쪽부터 돌아서 같은 물건을 두 번 쓰지 않게 해요.",
+        "when": "물건마다 한 번만 고를 때",
+        "complexity": "O(N × W)"
+      },
+      {
+        "name": "MOD 와 long long",
+        "signature": "const long long MOD = 1'000'000'007;\ndp[i] = (dp[i - 1] + dp[i - 2]) % MOD;",
+        "does": "더하거나 곱하기 전에 long long 으로 두고 매번 나머지를 취해요. 곱셈은 (a % MOD) * (b % MOD) % MOD.",
+        "when": "경우의 수를 나머지로 출력할 때",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "INF 상수",
+        "signature": "const int INF = 1e9;  // const long long INF = 1e18;",
+        "does": "최솟값 DP 의 '불가능' 표시예요. INF + 값이 넘치지 않을 만큼만 크게 잡아요.",
+        "when": "최솟값을 구할 때",
+        "complexity": "O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "반복문 순서로 '조합 수'와 '순서 있는 수' 나누기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    const long long MOD = 1'000'000'007;\n    vector<int> coins = {1, 2, 5};\n    int target = 5;\n\n    vector<long long> comb(target + 1, 0);   // 순서 무관: 동전이 바깥 반복\n    comb[0] = 1;\n    for (int c : coins)\n        for (int x = c; x <= target; x++)\n            comb[x] = (comb[x] + comb[x - c]) % MOD;\n\n    vector<long long> seq(target + 1, 0);    // 순서 있음: 금액이 바깥 반복\n    seq[0] = 1;\n    for (int x = 1; x <= target; x++)\n        for (int c : coins)\n            if (c <= x) seq[x] = (seq[x] + seq[x - c]) % MOD;\n\n    for (int x = 0; x <= target; x++) cout << comb[x] << (x == target ? '\\n' : ' ');\n    for (int x = 0; x <= target; x++) cout << seq[x] << (x == target ? '\\n' : ' ');\n    return 0;\n}\n",
+        "output": "1 1 2 2 3 4\n1 1 2 3 5 9\n"
+      },
+      {
+        "title": "0/1 배낭: 용량을 거꾸로 돌기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    vector<pair<int, int>> items = {{3, 4}, {4, 5}, {2, 3}};   // (무게, 가치)\n    int W = 6;\n\n    vector<int> once(W + 1, 0);               // 물건마다 한 번만\n    for (auto [w, v] : items)\n        for (int c = W; c >= w; c--)          // 큰 용량부터\n            once[c] = max(once[c], once[c - w] + v);\n\n    vector<int> many(W + 1, 0);               // 같은 물건 여러 번 가능\n    for (auto [w, v] : items)\n        for (int c = w; c <= W; c++)          // 작은 용량부터\n            many[c] = max(many[c], many[c - w] + v);\n\n    for (int c = 0; c <= W; c++) cout << once[c] << (c == W ? '\\n' : ' ');\n    for (int c = 0; c <= W; c++) cout << many[c] << (c == W ? '\\n' : ' ');\n    return 0;\n}\n",
+        "output": "0 0 3 4 5 7 8\n0 0 3 4 6 7 9\n"
+      },
+      {
+        "title": "메모이제이션과 바텀업 표: LCS 길이",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nstring a = \"GXTXAYB\", b = \"AGGTAB\";\nvector<vector<int>> memo;\n\nint lcs(int i, int j) {                       // a[i..], b[j..] 의 LCS 길이\n    if (i == (int)a.size() || j == (int)b.size()) return 0;\n    int& r = memo[i][j];\n    if (r != -1) return r;                    // 이미 계산함\n    if (a[i] == b[j]) return r = lcs(i + 1, j + 1) + 1;\n    return r = max(lcs(i + 1, j), lcs(i, j + 1));\n}\n\nint main() {\n    int n = a.size(), m = b.size();\n    memo.assign(n, vector<int>(m, -1));\n\n    vector<vector<int>> dp(n + 1, vector<int>(m + 1, 0));   // a[:i], b[:j]\n    for (int i = 1; i <= n; i++)\n        for (int j = 1; j <= m; j++)\n            dp[i][j] = (a[i - 1] == b[j - 1]) ? dp[i - 1][j - 1] + 1\n                                              : max(dp[i - 1][j], dp[i][j - 1]);\n\n    cout << lcs(0, 0) << ' ' << dp[n][m] << '\\n';\n    return 0;\n}\n",
+        "output": "4 4\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "long long x = (a - b) % MOD;   // a=3, b=5, MOD=7 → -2",
+        "right": "long long x = ((a - b) % MOD + MOD) % MOD;   // 5",
+        "why": "C++ 의 % 는 왼쪽 피연산자의 부호를 따라가서 음수가 나와요. Python 은 (3 - 5) % 7 이 5 예요. 빼기가 있는 DP 에서 자주 틀려요."
+      },
+      {
+        "wrong": "int dp[N];\ndp[i] = (dp[i - 1] + dp[i - 2]) % MOD;",
+        "right": "long long dp[N];\ndp[i] = (dp[i - 1] + dp[i - 2]) % MOD;",
+        "why": "두 값이 각각 10^9 가까우면 더한 값이 int 범위(약 2.1×10^9)를 넘어 나머지를 취하기 전에 오버플로가 나요. 곱셈이면 더 빨리 넘쳐요."
+      },
+      {
+        "wrong": "const int INF = INT_MAX;\ndp[v] = min(dp[v], dp[v - c] + 1);",
+        "right": "const int INF = 1e9;   // 또는 dp[v - c] != INF 일 때만 갱신",
+        "why": "INT_MAX + 1 은 오버플로(정의되지 않은 동작)라 음수가 되어 최솟값으로 뽑힐 수 있어요."
+      },
+      {
+        "wrong": "for (int c = w; c <= W; c++)   // 0/1 배낭인데 정방향\n    dp[c] = max(dp[c], dp[c - w] + v);",
+        "right": "for (int c = W; c >= w; c--)\n    dp[c] = max(dp[c], dp[c - w] + v);",
+        "why": "정방향이면 이번 물건을 넣은 값을 같은 반복에서 또 써서 한 물건을 여러 번 넣게 돼요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "같은 부분 문제가 반복되고, 작은 답으로 큰 답을 만들 수 있음",
+      "use": "DP"
+    },
+    {
+      "situation": "상태 수 × 전이 비용이 약 10^8 이하",
+      "use": "그 상태 정의로 DP 가능. 넘으면 상태를 줄이거나 다른 방법"
+    },
+    {
+      "situation": "순서 무관 조합 수 / 순서 있는 경우의 수",
+      "use": "물건(동전)을 바깥 반복 / 금액을 바깥 반복"
+    },
+    {
+      "situation": "물건을 한 번만 / 여러 번 쓸 수 있음",
+      "use": "용량 역방향 / 정방향"
+    },
+    {
+      "situation": "재귀식이 자연스럽고 필요한 상태만 계산",
+      "use": "메모이제이션(lru_cache, memo 배열). Python 은 깊이에 주의"
+    },
+    {
+      "situation": "상태가 '고른 원소의 집합'",
+      "use": "비트마스크 DP(비트마스크 항목)"
+    }
+  ],
+  "checklist": [
+    "dp[i] 가 무엇을 뜻하는지 한 문장으로 적었나요?",
+    "시작값(dp[0] 등)과 불가능한 상태(0, -1, INF)를 정했나요?",
+    "점화식에서 참조하는 칸이 이미 계산된 순서로 돌고 있나요?",
+    "배낭에서 반복 방향(역방향/정방향)이 문제와 맞나요?",
+    "나머지를 매 단계 취하고, C++ 은 long long 과 음수 나머지를 처리했나요?",
+    "표 크기(메모리)와 상태 수 × 전이 수(시간)를 계산했나요?",
+    "Python 메모이제이션이면 재귀 깊이가 1000 을 넘지 않나요?"
+  ]
+}
