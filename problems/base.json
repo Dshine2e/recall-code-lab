@@ -1,0 +1,242 @@
+[
+  {
+    "id": "bfs",
+    "title": "미로의 가장 짧은 길",
+    "category": "기본기",
+    "topic": "BFS",
+    "syntax": "append 인자",
+    "difficulty": "기본",
+    "minutes": 15,
+    "addedOn": null,
+    "description": "첫 줄에 행 n, 열 m(1~30), 이어 n개의 0/1 문자열이 주어집니다. 1인 칸만 지나 (0,0)에서 (n-1,m-1)까지 상하좌우 이동하세요. 출발 칸을 포함한 최소 칸 수를 출력합니다. 도달할 수 없으면 -1입니다.",
+    "tests": [
+      {
+        "label": "기본 · 우회 경로",
+        "input": "3 3\n110\n011\n001",
+        "output": "5"
+      },
+      {
+        "label": "반례 · 시작이 곧 도착",
+        "input": "1 1\n1",
+        "output": "1"
+      },
+      {
+        "label": "반례 · 도달 불가",
+        "input": "2 2\n10\n01",
+        "output": "-1"
+      }
+    ],
+    "python": "from collections import deque\nn, m = map(int, input().split())\na = [input().strip() for _ in range(n)]\nq = deque([(0, 0, 1)]) if a[0][0] == \"1\" else deque()\nseen = {(0, 0)}\nanswer = -1\nwhile q:\n    x, y, d = q.popleft()\n    if (x, y) == (n-1, m-1):\n        answer = d\n        break\n    for dx, dy in [(1,0), (-1,0), (0,1), (0,-1)]:\n        nx, ny = x+dx, y+dy\n        if 0 <= nx < n and 0 <= ny < m and a[nx][ny] == \"1\" and (nx,ny) not in seen:\n            seen.add((nx,ny))\n            q.append(nx, ny, d+1)\nprint(answer)",
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n,m; cin>>n>>m; vector<string> a(n); for(auto &s:a) cin>>s;\n  queue<tuple<int,int,int>> q; set<pair<int,int>> seen;\n  if(a[0][0]=='1') {q.push({0,0,1}); seen.insert({0,0});}\n  int ans=-1; int dx[]={1,-1,0,0},dy[]={0,0,1,-1};\n  while(!q.empty()){auto [x,y,d]=q.front(); q.pop();\n    if(x==n-1 && y==m-1){ans=d; break;}\n    for(int k=0;k<4;k++){int nx=x+dx[k],ny=y+dy[k];\n      if(nx>=0 && nx<n && ny>=0 && ny<m && a[nx][ny]=='1' && !seen.count({nx,ny})) {seen.insert({nx,ny}); q.push({nx,ny,d+1});}\n    }\n  } cout<<ans;\n}\n"
+  },
+  {
+    "id": "dfs",
+    "title": "연결된 네트워크 세기",
+    "category": "기본기",
+    "topic": "DFS",
+    "syntax": "방문 처리",
+    "difficulty": "기본",
+    "minutes": 15,
+    "addedOn": null,
+    "description": "정점 수 n(1~100)과 간선 수 m, 이어 m개의 무방향 간선 u v(0-based)가 주어집니다. 연결 요소의 개수를 출력하세요. 고립된 정점도 하나로 셉니다.",
+    "tests": [
+      {
+        "label": "기본 · 두 컴포넌트",
+        "input": "5 3\n0 1\n1 2\n3 4",
+        "output": "2"
+      },
+      {
+        "label": "반례 · 고립된 정점",
+        "input": "3 0",
+        "output": "3"
+      },
+      {
+        "label": "반례 · 사이클",
+        "input": "3 3\n0 1\n1 2\n2 0",
+        "output": "1"
+      }
+    ],
+    "python": "n, m = map(int, input().split())\ng = [[] for _ in range(n)]\nfor _ in range(m):\n    u,v = map(int, input().split())\n    g[u].append(v); g[v].append(u)\nseen = set()\ncount = 0\nfor root in range(n):\n    if root in seen: continue\n    count += 1\n    stack = [root]\n    while stack:\n        u = stack.pop()\n        if u in seen: continue\n        seen.add(u)\n        stack.extend(g[u])\nprint(count)",
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n,m; cin>>n>>m; vector<vector<int>> g(n);\n  while(m--){int u,v;cin>>u>>v;g[u].push_back(v);g[v].push_back(u);}\n  vector<bool> seen(n);int count=0;\n  for(int r=0;r<n;r++){if(seen[r])continue;count++;stack<int> st;st.push(r);\n    while(!st.empty()){int u=st.top();st.pop();if(seen[u])continue;seen[u]=true;for(int v:g[u])st.push(v);}}\n  cout<<count;\n}\n"
+  },
+  {
+    "id": "hash",
+    "title": "가장 자주 등장한 단어",
+    "category": "기본기",
+    "topic": "해시",
+    "syntax": "키 조회",
+    "difficulty": "입문",
+    "minutes": 10,
+    "addedOn": null,
+    "description": "첫 줄 n(1~100), 다음 n줄에 소문자 단어가 주어집니다. 가장 자주 나온 단어를 출력하세요. 동률이면 사전순으로 가장 앞선 단어입니다.",
+    "tests": [
+      {
+        "label": "기본 · 빈도",
+        "input": "4\napple\npear\napple\nplum",
+        "output": "apple"
+      },
+      {
+        "label": "반례 · 동률",
+        "input": "2\nzoo\nant",
+        "output": "ant"
+      },
+      {
+        "label": "반례 · 한 단어",
+        "input": "1\nx",
+        "output": "x"
+      }
+    ],
+    "python": "n = int(input())\ncounts = {}\nfor _ in range(n):\n    word = input().strip()\n    counts[word] = counts.get(word, 0) + 1\nprint(min(counts, key=lambda w: (-counts[w], w)))",
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;map<string,int> counts;while(n--){string s;cin>>s;counts[s]++;}\n  string answer;int best=0;for(auto [s,c]:counts)if(c>best){answer=s;best=c;}cout<<answer;\n}\n"
+  },
+  {
+    "id": "heap",
+    "title": "작은 수부터 꺼내기",
+    "category": "기본기",
+    "topic": "힙",
+    "syntax": "heapq 사용",
+    "difficulty": "기본",
+    "minutes": 10,
+    "addedOn": null,
+    "description": "첫 줄 n(0~100), 둘째 줄에 n개의 정수가 주어집니다. 최소 힙을 사용해 오름차순으로 꺼낸 값을 공백으로 구분해 출력하세요. 빈 입력은 빈 줄입니다.",
+    "tests": [
+      {
+        "label": "기본 · 순서",
+        "input": "4\n5 1 3 2",
+        "output": "1 2 3 5"
+      },
+      {
+        "label": "반례 · 음수와 중복",
+        "input": "4\n-1 3 -1 0",
+        "output": "-1 -1 0 3"
+      },
+      {
+        "label": "반례 · 빈 힙",
+        "input": "0\n",
+        "output": ""
+      }
+    ],
+    "python": "import heapq\nn = int(input())\nh = list(map(int, input().split()))\nh = heapq.heapify(h)\nanswer = []\nwhile h:\n    answer.append(heapq.heappop(h))\nprint(*answer)",
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;priority_queue<int> h;while(n--){int x;cin>>x;h.push(x);}\n  while(!h.empty()){cout<<h.top()<<\" \";h.pop();}\n}\n"
+  },
+  {
+    "id": "deque",
+    "title": "회전하는 카드 덱",
+    "category": "기본기",
+    "topic": "덱",
+    "syntax": "양끝 연산",
+    "difficulty": "기본",
+    "minutes": 10,
+    "addedOn": null,
+    "description": "n(0~100)과 k(0~100)가 주어집니다. 1부터 n까지의 덱을 오른쪽으로 k칸 회전한 뒤 공백으로 출력하세요. 빈 덱은 빈 줄입니다.",
+    "tests": [
+      {
+        "label": "기본 · 오른쪽 회전",
+        "input": "5 2",
+        "output": "4 5 1 2 3"
+      },
+      {
+        "label": "반례 · 길이보다 큰 회전",
+        "input": "3 7",
+        "output": "3 1 2"
+      },
+      {
+        "label": "반례 · 빈 덱",
+        "input": "0 2",
+        "output": ""
+      }
+    ],
+    "python": "from collections import deque\nn,k = map(int, input().split())\nd = deque(range(1,n+1))\nd.rotate(k)\nprint(*d)",
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n,k;cin>>n>>k;deque<int>d;for(int i=1;i<=n;i++)d.push_back(i);\n  if(n)for(int i=0;i<k%n;i++){int x=d.back();d.pop_back();d.push_front(x);}for(int x:d)cout<<x<<\" \";\n}\n"
+  },
+  {
+    "id": "sort",
+    "title": "두 가지 기준으로 정렬",
+    "category": "기본기",
+    "topic": "정렬",
+    "syntax": "정렬 반환값",
+    "difficulty": "기본",
+    "minutes": 12,
+    "addedOn": null,
+    "description": "첫 줄 n(0~100), 다음 n줄에 두 정수 a b가 주어집니다. a는 오름차순, 동률이면 b는 내림차순으로 정렬해 한 쌍씩 출력하세요.",
+    "tests": [
+      {
+        "label": "기본 · 복합 정렬",
+        "input": "3\n2 3\n1 4\n2 5",
+        "output": "1 4\n2 5\n2 3"
+      },
+      {
+        "label": "반례 · 같은 원소",
+        "input": "2\n1 1\n1 1",
+        "output": "1 1\n1 1"
+      },
+      {
+        "label": "반례 · 빈 배열",
+        "input": "0",
+        "output": ""
+      }
+    ],
+    "python": "n = int(input())\na = [tuple(map(int,input().split())) for _ in range(n)]\nresult = a.sort(key=lambda x:(x[0],-x[1]))\nfor row in result:\n    print(*row)",
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;vector<pair<int,int>>a(n);for(auto &[x,y]:a)cin>>x>>y;\n  sort(a.begin(),a.end(),[](auto x,auto y){return x.first!=y.first?x.first<y.first:x.second>y.second;});for(auto [x,y]:a)cout<<x<<\" \"<<y<<\"\\n\";\n}\n"
+  },
+  {
+    "id": "string",
+    "title": "단어 사이의 공백 정리",
+    "category": "기본기",
+    "topic": "문자열",
+    "syntax": "split / join",
+    "difficulty": "입문",
+    "minutes": 8,
+    "addedOn": null,
+    "description": "공백을 포함한 한 줄(0~200자)을 읽고 연속된 공백과 양끝 공백을 제거해 단어를 하이픈(-)으로 연결하세요. 모두 공백이면 빈 줄을 출력합니다.",
+    "tests": [
+      {
+        "label": "기본 · 여러 공백",
+        "input": "  hello   world  ",
+        "output": "hello-world"
+      },
+      {
+        "label": "반례 · 공백만",
+        "input": "   ",
+        "output": ""
+      },
+      {
+        "label": "반례 · 한 단어",
+        "input": "python",
+        "output": "python"
+      }
+    ],
+    "python": "s = input()\nprint(\"-\".join(s.split()))",
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  string s,w,result;getline(cin,s);istringstream in(s);while(in>>w){if(!result.empty())result+=\"-\";result+=w;}cout<<result;\n}\n"
+  },
+  {
+    "id": "index",
+    "title": "마지막 원소까지 안전하게",
+    "category": "기본기",
+    "topic": "인덱싱",
+    "syntax": "인덱스 경계",
+    "difficulty": "입문",
+    "minutes": 8,
+    "addedOn": null,
+    "description": "첫 줄 n(0~100), 둘째 줄 n개의 정수가 주어집니다. 모든 원소의 합을 출력하세요. 빈 배열의 합은 0입니다. 인덱스 경계를 점검하는 연습입니다.",
+    "tests": [
+      {
+        "label": "기본 · 합계",
+        "input": "3\n10 20 30",
+        "output": "60"
+      },
+      {
+        "label": "반례 · 빈 배열",
+        "input": "0\n",
+        "output": "0"
+      },
+      {
+        "label": "반례 · 원소 하나",
+        "input": "1\n7",
+        "output": "7"
+      }
+    ],
+    "python": "n = int(input())\na = list(map(int, input().split()))\ntotal = 0\nfor i in range(n + 1):\n    total += a[i]\nprint(total)",
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;vector<int>a(n);for(int &x:a)cin>>x;long long total=0;\n  for(int i=0;i<=n;i++)total+=a.at(i);cout<<total;\n}\n"
+  }
+]

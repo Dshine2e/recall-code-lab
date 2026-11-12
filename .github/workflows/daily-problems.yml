@@ -1,0 +1,115 @@
+name: 일일 문제 생성
+
+on:
+  schedule:
+    - cron: "0 18 * * *" # 매일 18:00 UTC = 03:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write # 문제 커밋·푸시
+  issues: write   # 실패 알림 이슈
+  pages: write    # Pages 재빌드 요청(예비)
+
+concurrency:
+  group: daily-problems
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 오늘 날짜(KST)와 기존 파일 확인
+        id: check
+        run: |
+          DATE=$(TZ=Asia/Seoul date +%F)
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          if [ -f "problems/$DATE.json" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "problems/$DATE.json 이 이미 있어 건너뜁니다."
+          fi
+
+      - name: 도구 확인
+        if: steps.check.outputs.exists != 'true'
+        run: python3 --version && g++ --version | head -1
+
+      - name: Claude Code로 절차 수행
+        if: steps.check.outputs.exists != 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: "CLAUDE.md의 일일 문제 생성 절차를 수행해"
+          claude_args: |
+            --model claude-opus-5-5
+            --max-turns 200
+            --allowedTools "Read,Write,Edit,Glob,Grep,Bash"
+
+      - name: 검증 후 커밋·푸시
+        if: steps.check.outputs.exists != 'true'
+        env:
+          DATE: ${{ steps.check.outputs.date }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+
+          # 1) problems/ 와 .solutions/ 밖의 변경은 허용하지 않는다(커밋된 것 + 추적 파일 수정).
+          changed=$( { git diff --name-only origin/main...HEAD; git diff --name-only HEAD; } | sort -u )
+          bad=$(printf '%s\n' "$changed" | grep -v -E '^(problems/|\.solutions/)' | grep -v '^$' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::허용되지 않은 경로가 바뀌었습니다:"; echo "$bad"; exit 1
+          fi
+          untracked=$(git ls-files --others --exclude-standard | grep -v -E '^(problems/|\.solutions/)' || true)
+          [ -n "$untracked" ] && echo "::warning::커밋하지 않는 임시 파일: $untracked"
+
+          # 2) 오늘 파일이 있어야 하고, 전체가 검증을 통과해야 한다.
+          if [ ! -f "problems/$DATE.json" ]; then
+            echo "::error::problems/$DATE.json 이 만들어지지 않았습니다."; exit 1
+          fi
+          python3 tools/validate.py --build-manifest --require-solutions
+
+          # 3) 아직 커밋되지 않은 변경이 있으면 커밋하고, main 에 없는 커밋이 있으면 푸시한다.
+          if [ -n "$(git status --porcelain -- problems .solutions)" ]; then
+            git add problems .solutions
+            git commit -m "daily: $DATE 문제 3개 추가 (입문/기본/도전)"
+          fi
+          ahead=$(git rev-list --count origin/main..HEAD)
+          if [ "$ahead" -gt 0 ]; then
+            git push origin HEAD:main
+            echo "pushed=true" >> "$GITHUB_ENV"
+          else
+            echo "새로 푸시할 커밋이 없습니다(이미 main 에 반영됨)."
+          fi
+          git fetch origin main
+          git cat-file -e "origin/main:problems/$DATE.json" || { echo "::error::main 에 오늘 문제가 없습니다."; exit 1; }
+
+      - name: Pages 재빌드 요청(예비)
+        if: env.pushed == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds" || true
+
+      - name: 실패 알림 이슈
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DATE: ${{ steps.check.outputs.date }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="일일 문제 생성 실패: ${DATE:-날짜 미상}"
+          body="자동 생성이 실패했어요. 실행 로그: $RUN_URL
+
+          이 이슈는 워크플로가 자동으로 만들었어요. 원인을 고친 뒤 Actions에서 '일일 문제 생성'을 수동 실행(Run workflow)하면 같은 날짜로 다시 시도해요."
+          existing=$(gh issue list --repo "${{ github.repository }}" --state open --search "\"$title\" in:title" --json number --jq '.[0].number' || true)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "${{ github.repository }}" --body "다시 실패했어요: $RUN_URL"
+          else
+            gh issue create --repo "${{ github.repository }}" --title "$title" --body "$body"
+          fi
