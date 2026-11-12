@@ -59,13 +59,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
 
-          # 1) problems/ 와 .solutions/ 밖의 변경은 허용하지 않는다(커밋된 것 + 추적 파일 수정).
-          changed=$( { git diff --name-only origin/main...HEAD; git diff --name-only HEAD; } | sort -u )
-          bad=$(printf '%s\n' "$changed" | grep -v -E '^(problems/|\.solutions/)' | grep -v '^$' || true)
+          # 1) problems/ · .solutions/ · concepts/ 밖의 변경은 허용하지 않는다(커밋된 것 + 추적 파일 수정).
+          changed=$( { git diff --name-only origin/main...HEAD; git diff --name-only HEAD; git ls-files --others --exclude-standard -- concepts; } | sort -u )
+          bad=$(printf '%s\n' "$changed" | grep -v -E '^(problems/|\.solutions/|concepts/)' | grep -v '^$' || true)
           if [ -n "$bad" ]; then
             echo "::error::허용되지 않은 경로가 바뀌었습니다:"; echo "$bad"; exit 1
           fi
-          untracked=$(git ls-files --others --exclude-standard | grep -v -E '^(problems/|\.solutions/)' || true)
+          untracked=$(git ls-files --others --exclude-standard | grep -v -E '^(problems/|\.solutions/|concepts/)' || true)
           [ -n "$untracked" ] && echo "::warning::커밋하지 않는 임시 파일: $untracked"
 
           # 2) 오늘 파일이 있어야 하고, 전체가 검증을 통과해야 한다.
@@ -74,9 +74,20 @@ jobs:
           fi
           python3 tools/validate.py --build-manifest --require-solutions
 
+          # 개념서를 건드렸다면 개념서도 검증한다. 실패하면 개념서 변경만 되돌리고 문제는 계속 진행한다.
+          if printf '%s\n' "$changed" | grep -q '^concepts/'; then
+            if ! python3 tools/validate_concepts.py --build-manifest; then
+              echo "::warning::개념서 검증 실패 — concepts/ 변경을 되돌리고 문제만 커밋합니다."
+              git checkout origin/main -- concepts
+              git clean -fdq -- concepts
+            fi
+          fi
+          echo "## 문제 통계" >> "$GITHUB_STEP_SUMMARY"
+          python3 tools/stats.py | tee -a "$GITHUB_STEP_SUMMARY"
+
           # 3) 아직 커밋되지 않은 변경이 있으면 커밋하고, main 에 없는 커밋이 있으면 푸시한다.
-          if [ -n "$(git status --porcelain -- problems .solutions)" ]; then
-            git add problems .solutions
+          if [ -n "$(git status --porcelain -- problems .solutions concepts)" ]; then
+            git add problems .solutions concepts
             git commit -m "daily: $DATE 문제 3개 추가 (입문/기본/도전)"
           fi
           ahead=$(git rev-list --count origin/main..HEAD)

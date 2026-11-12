@@ -7,6 +7,9 @@
   python3 tools/validate.py --require-solutions     # .solutions/<id>.py 와 .cpp 가 모두 있어야 통과
   python3 tools/validate.py --build-manifest        # problems/manifest.json 다시 만들기
 
+--only 를 주면 문제 단위 검사(필드, 힌트, 정답 실행)는 그 문제들에만 한다.
+파일 단위 검사(manifest, id 중복, 하루 3문제 규칙)는 항상 전체에 한다.
+
 채점 규칙(사이트와 동일): 각 줄 오른쪽 공백을 지우고, 끝의 빈 줄을 무시한 뒤 비교한다.
 """
 from __future__ import annotations
@@ -33,13 +36,28 @@ GEN_TIME_LIMIT = 30.0
 COMPILE_TIME_LIMIT = 120.0
 
 REQUIRED = ["id", "title", "category", "topic", "syntax", "difficulty", "minutes",
-            "addedOn", "description", "tests", "python", "cpp"]
+            "addedOn", "description", "tests", "python", "cpp", "hints"]
 DIFFICULTIES = ["입문", "기본", "도전"]
 CATEGORIES = ["기초 문법", "알고리즘", "백준형", "기본기"]
 CATEGORY_OF = {"입문": "기초 문법", "기본": "알고리즘", "도전": "백준형"}
 BASE_IDS = ["bfs", "dfs", "hash", "heap", "deque", "sort", "string", "index"]
 DATE_FILE = re.compile(r"^(\d{4}-\d{2}-\d{2})\.json$")
 DAILY_ID = re.compile(r"^daily-(\d{4}-\d{2}-\d{2})-([1-3])$")
+SEED_FILE = re.compile(r"^seed-(\d{2})\.json$")
+SEED_ID = re.compile(r"^seed-(\d{3})$")
+ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+SEED_PER_FILE = (3, 8)
+
+# 힌트: 정확히 3개, 각 600자 이하, 코드 흔적 금지
+HINT_COUNT = 3
+HINT_MAX = 600
+HINT_MIN = 40
+CODE_TRACES = [
+    ("```", "코드 블록"), ("def ", "def "), ("#include", "#include"), ("for (", "for ("), ("for(", "for("),
+    ("while (", "while ("), ("while(", "while("), ("if (", "if ("), ("cout <<", "cout <<"), ("cin >>", "cin >>"),
+    ("import ", "import "), ("lambda ", "lambda "), ("in range(", "in range("), ("return ", "return "),
+    ("int main", "int main"), ("std::", "std::"), ("print(", "print("), ("->", "->"),
+]
 
 # 이전 사이트에서 옮겨 온 문제. 옛 형식(라벨, 난이도 배치)을 그대로 두기 위해 엄격 규칙에서 뺀다.
 LEGACY_IDS = set(BASE_IDS) | {
@@ -87,10 +105,12 @@ class Report:
 # ---------------------------------------------------------------- 데이터 읽기
 
 def problem_files() -> list[Path]:
+    """manifest 순서: 날짜 파일(최신 먼저) → seed 파일(번호 순) → base.json"""
     dated = sorted((p for p in PROBLEMS.glob("*.json") if DATE_FILE.match(p.name)),
                    key=lambda p: p.name, reverse=True)
+    seeds = sorted((p for p in PROBLEMS.glob("*.json") if SEED_FILE.match(p.name)), key=lambda p: p.name)
     base = PROBLEMS / "base.json"
-    return dated + ([base] if base.exists() else [])
+    return dated + seeds + ([base] if base.exists() else [])
 
 
 def build_manifest() -> list[str]:
@@ -138,6 +158,16 @@ def check_file_level(rep: Report, items: list[tuple[Path, dict]]) -> None:
     for path, p in items:
         by_file.setdefault(path.name, []).append(p)
     for name, plist in by_file.items():
+        sm = SEED_FILE.match(name)
+        if sm:
+            lo, hi = SEED_PER_FILE
+            if not lo <= len(plist) <= hi:
+                rep.error(f"{name}: seed 파일에는 문제 {lo}~{hi}개를 넣습니다 (현재 {len(plist)}개)")
+            ranks = [DIFFICULTIES.index(p.get("difficulty")) if p.get("difficulty") in DIFFICULTIES else -1
+                     for p in plist]
+            if ranks != sorted(ranks):
+                rep.error(f"{name}: 문제 순서는 입문→기본→도전 이어야 합니다")
+            continue
         m = DATE_FILE.match(name)
         if not m:
             continue
@@ -151,6 +181,23 @@ def check_file_level(rep: Report, items: list[tuple[Path, dict]]) -> None:
             want = f"daily-{m.group(1)}-{i}"
             if p.get("id") != want:
                 rep.error(f"{name}: {i}번째 문제 id는 {want} 이어야 합니다 (현재 {p.get('id')})")
+
+
+def check_hints(rep: Report, where: str, hints) -> None:
+    if not isinstance(hints, list) or len(hints) != HINT_COUNT:
+        rep.error(f"{where}: hints 는 문자열 {HINT_COUNT}개 배열이어야 합니다")
+        return
+    for i, h in enumerate(hints, 1):
+        if not isinstance(h, str) or not h.strip():
+            rep.error(f"{where}: {i}번 힌트가 비어 있습니다")
+            continue
+        if len(h) > HINT_MAX:
+            rep.error(f"{where}: {i}번 힌트가 {HINT_MAX}자를 넘습니다 ({len(h)}자)")
+        if len(h.strip()) < HINT_MIN:
+            rep.error(f"{where}: {i}번 힌트가 너무 짧습니다 ({len(h.strip())}자, {HINT_MIN}자 이상)")
+        found = [label for token, label in CODE_TRACES if token in h]
+        if found:
+            rep.error(f"{where}: {i}번 힌트에 코드 흔적이 있습니다: {found}")
 
 
 def check_problem(rep: Report, path: Path, p: dict) -> None:
@@ -172,6 +219,8 @@ def check_problem(rep: Report, path: Path, p: dict) -> None:
     if not isinstance(p.get("minutes"), int) or isinstance(p.get("minutes"), bool) or p.get("minutes", 0) <= 0:
         rep.error(f"{where}: minutes 는 양의 정수여야 합니다")
 
+    check_hints(rep, where, p.get("hints"))
+
     tests = p.get("tests")
     if not isinstance(tests, list) or len(tests) < 3:
         rep.error(f"{where}: 테스트는 3개 이상이어야 합니다")
@@ -189,17 +238,23 @@ def check_problem(rep: Report, path: Path, p: dict) -> None:
             rep.error(f"{where}: 기본기 문제의 addedOn 은 null 이어야 합니다")
         return
 
-    m = DATE_FILE.match(path.name)
-    date = m.group(1) if m else None
-    idm = DAILY_ID.match(str(pid))
-    if not idm:
-        rep.error(f"{where}: 일일 문제 id 는 daily-YYYY-MM-DD-N 형식이어야 합니다")
-    elif idm.group(1) != date:
-        rep.error(f"{where}: id 날짜가 파일 날짜({date})와 다릅니다")
-    if p.get("addedOn") != date:
-        rep.error(f"{where}: addedOn 은 파일 날짜({date})와 같아야 합니다 (현재 {p.get('addedOn')!r})")
+    if SEED_FILE.match(path.name):
+        if not SEED_ID.match(str(pid)):
+            rep.error(f"{where}: seed 문제 id 는 seed-NNN 형식이어야 합니다")
+        if not (isinstance(p.get("addedOn"), str) and ISO_DATE.match(p["addedOn"])):
+            rep.error(f"{where}: seed 문제 addedOn 은 YYYY-MM-DD 여야 합니다 (현재 {p.get('addedOn')!r})")
+    else:
+        m = DATE_FILE.match(path.name)
+        date = m.group(1) if m else None
+        idm = DAILY_ID.match(str(pid))
+        if not idm:
+            rep.error(f"{where}: 일일 문제 id 는 daily-YYYY-MM-DD-N 형식이어야 합니다")
+        elif idm.group(1) != date:
+            rep.error(f"{where}: id 날짜가 파일 날짜({date})와 다릅니다")
+        if p.get("addedOn") != date:
+            rep.error(f"{where}: addedOn 은 파일 날짜({date})와 같아야 합니다 (현재 {p.get('addedOn')!r})")
     if p.get("category") == "기본기":
-        rep.error(f"{where}: 일일 문제의 category 는 '기본기' 일 수 없습니다")
+        rep.error(f"{where}: 일일·seed 문제의 category 는 '기본기' 일 수 없습니다")
 
     if pid in LEGACY_IDS:
         return
@@ -382,7 +437,8 @@ def main() -> int:
             rep.error(f"id 중복: {pid} ({seen[pid]}, {path.name})")
         elif pid:
             seen[pid] = path.name
-        check_problem(rep, path, p)
+        if not args.only or pid in args.only:
+            check_problem(rep, path, p)
     base_ids = [p.get("id") for path, p in items if path.name == "base.json"]
     if sorted(base_ids) != sorted(BASE_IDS):
         rep.error(f"base.json 의 id 는 {BASE_IDS} 여야 합니다 (현재 {base_ids})")
