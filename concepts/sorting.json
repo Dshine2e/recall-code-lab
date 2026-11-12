@@ -1,0 +1,255 @@
+{
+  "slug": "sorting",
+  "title": "정렬",
+  "category": "알고리즘",
+  "order": 1,
+  "summary": "정렬 기준을 정확히 세우는 법: key, 여러 기준, 안정 정렬, 좌표 압축까지.",
+  "when": [
+    "순서대로 처리하면 쉬워지는 문제(그리디의 전처리)",
+    "점수 내림차순, 같으면 이름 오름차순처럼 기준이 여러 개일 때",
+    "같은 값끼리 이웃하게 모으거나 중복을 없앨 때",
+    "이분 탐색·투 포인터를 쓰기 전에",
+    "값이 너무 커서 순위(좌표 압축)로 바꿔 쓸 때"
+  ],
+  "topics": [
+    "=정렬",
+    "여러 기준 정렬",
+    "정렬과 그리디",
+    "좌표 압축"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "list.sort",
+        "signature": "a.sort(key=None, reverse=False)",
+        "does": "리스트를 그 자리에서 정렬하고 None 을 돌려줘요.",
+        "when": "원래 순서가 더는 필요 없을 때",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "sorted",
+        "signature": "sorted(iterable, key=None, reverse=False)",
+        "does": "정렬된 새 리스트를 돌려줘요. 원본은 그대로예요. 문자열·dict·set 도 받아요.",
+        "when": "원본을 남겨야 하거나 리스트가 아닌 것을 정렬할 때",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "key",
+        "signature": "key=lambda x: ...",
+        "does": "각 원소에서 비교에 쓸 값을 뽑아요. 원소마다 한 번만 계산해요.",
+        "when": "길이 순(len), 숫자 문자열(int), 대소문자 무시(str.lower)",
+        "complexity": "key 계산 O(N) + 정렬"
+      },
+      {
+        "name": "튜플 key(여러 기준)",
+        "signature": "key=lambda x: (-x.score, x.name)",
+        "does": "튜플은 앞 원소부터 비교해요. 숫자 기준은 부호를 바꿔 내림차순으로 만들어요.",
+        "when": "기준이 2개 이상일 때",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "reverse",
+        "signature": "reverse=True",
+        "does": "전체 순서를 뒤집어요(모든 기준이 함께 뒤집혀요). 같은 값의 원래 순서는 유지돼요.",
+        "when": "기준이 하나일 때 내림차순",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "안정 정렬",
+        "signature": "sort / sorted (Timsort)",
+        "does": "key 가 같은 원소는 원래 순서를 지켜요.",
+        "when": "덜 중요한 기준으로 먼저, 중요한 기준으로 나중에 두 번 정렬하기",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "functools.cmp_to_key",
+        "signature": "sorted(a, key=cmp_to_key(cmp))",
+        "does": "두 원소를 비교해 음수/0/양수를 돌려주는 함수를 key 로 바꿔요.",
+        "when": "key 로 표현하기 어려운 비교(이어 붙인 문자열 비교 등)",
+        "complexity": "O(N log N) 번 비교"
+      },
+      {
+        "name": "좌표 압축",
+        "signature": "xs = sorted(set(a)); rank = {v: i for i, v in enumerate(xs)}",
+        "does": "값을 0부터 시작하는 순위로 바꿔요.",
+        "when": "값 범위가 커서 배열 인덱스로 못 쓸 때",
+        "complexity": "O(N log N)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "점수 내림차순, 같으면 이름 오름차순",
+        "code": "import sys\n\ndata = sys.stdin.read().split()\nn = int(data[0])\npeople = [(data[1 + 2 * i], int(data[2 + 2 * i])) for i in range(n)]\npeople.sort(key=lambda p: (-p[1], p[0]))\nfor name, score in people:\n    print(name, score)\n",
+        "stdin": "5\nyuna 90\nbora 75\nalex 90\ndami 75\ncody 100\n",
+        "output": "cody 100\nalex 90\nyuna 90\nbora 75\ndami 75\n"
+      },
+      {
+        "title": "key 의 힘: 숫자 문자열, 길이, 대소문자, 안정성",
+        "code": "nums = [\"10\", \"9\", \"100\", \"25\"]\nprint(sorted(nums))\nprint(sorted(nums, key=int))\n\nwords = [\"kiwi\", \"Fig\", \"apple\", \"date\", \"Banana\"]\nprint(sorted(words))\nprint(sorted(words, key=str.lower))\nprint(sorted(words, key=len))  # 길이가 같으면 원래 순서 유지\n\na = [3, 1, 2]\nb = sorted(a)\nprint(a, b)  # sorted 는 새 리스트, 원본 그대로\nr = a.sort()\nprint(r, a)  # sort 는 None 을 돌려주고 a 를 바꾼다\n",
+        "output": "['10', '100', '25', '9']\n['9', '10', '25', '100']\n['Banana', 'Fig', 'apple', 'date', 'kiwi']\n['apple', 'Banana', 'date', 'Fig', 'kiwi']\n['Fig', 'kiwi', 'date', 'apple', 'Banana']\n[3, 1, 2] [1, 2, 3]\nNone [1, 2, 3]\n"
+      },
+      {
+        "title": "좌표 압축: 값을 순위로",
+        "code": "import bisect\n\na = [1000000000, -5, 42, 42, 7]\nxs = sorted(set(a))\nrank = {v: i for i, v in enumerate(xs)}\nprint(xs)\nprint([rank[v] for v in a])\nprint([bisect.bisect_left(xs, v) for v in a])\n",
+        "output": "[-5, 7, 42, 1000000000]\n[3, 0, 2, 2, 1]\n[3, 0, 2, 2, 1]\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "a = a.sort()",
+        "right": "a.sort()\n# 또는 a = sorted(a)",
+        "why": "sort() 는 그 자리에서 정렬하고 None 을 돌려줘요. a 가 None 이 돼요."
+      },
+      {
+        "wrong": "sorted(people, key=lambda p: (p[1], p[0]), reverse=True)\n# 점수 내림차순 + 이름 오름차순을 원함",
+        "right": "sorted(people, key=lambda p: (-p[1], p[0]))",
+        "why": "reverse=True 는 모든 기준을 함께 뒤집어서 이름도 내림차순이 돼요. 숫자 기준만 부호를 바꿔요."
+      },
+      {
+        "wrong": "sorted([\"10\", \"9\", \"100\"])   # ['10', '100', '9']",
+        "right": "sorted([\"10\", \"9\", \"100\"], key=int)   # ['9', '10', '100']",
+        "why": "문자열은 사전 순이라 '100' 이 '9' 보다 앞이에요. 입력을 int 로 바꾸지 않았는지 확인해요."
+      },
+      {
+        "wrong": "sorted([\"b\", \"A\", \"a\", \"B\"])   # ['A', 'B', 'a', 'b']",
+        "right": "sorted([\"b\", \"A\", \"a\", \"B\"], key=str.lower)   # ['A', 'a', 'b', 'B']",
+        "why": "대문자가 소문자보다 코드값이 작아 모두 앞에 와요. 대소문자를 무시하려면 key 를 줘요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "sort",
+        "signature": "sort(v.begin(), v.end());",
+        "does": "오름차순으로 정렬해요. 안정 정렬이 아니에요.",
+        "when": "기본 정렬",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "내림차순",
+        "signature": "sort(v.begin(), v.end(), greater<>());",
+        "does": "큰 값부터 정렬해요. sort(v.rbegin(), v.rend()) 도 같아요.",
+        "when": "기준이 하나인 내림차순",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "람다 비교",
+        "signature": "sort(b, e, [](const T& a, const T& b) { return ...; });",
+        "does": "a 가 b 보다 앞이어야 할 때만 true 를 돌려줘요(같으면 false).",
+        "when": "여러 기준 정렬",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "pair / tuple 기본 비교",
+        "signature": "vector<pair<int,string>> v; sort(...)",
+        "does": "first, 그다음 second 순으로 비교해요.",
+        "when": "부호를 바꾼 값을 first 에 넣어 여러 기준을 간단히",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "stable_sort",
+        "signature": "stable_sort(b, e, cmp);",
+        "does": "비교가 같은 원소의 원래 순서를 지켜요.",
+        "when": "같은 키에서 입력 순서를 유지해야 할 때",
+        "complexity": "O(N log N), 추가 메모리가 없으면 O(N log² N)"
+      },
+      {
+        "name": "unique + erase",
+        "signature": "v.erase(unique(v.begin(), v.end()), v.end());",
+        "does": "정렬된 상태에서 연속 중복을 지워요. unique 만으로는 크기가 줄지 않아요.",
+        "when": "중복 제거, 좌표 압축",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "좌표 압축",
+        "signature": "lower_bound(xs.begin(), xs.end(), x) - xs.begin()",
+        "does": "정렬·중복 제거한 xs 에서 x 의 순위를 구해요.",
+        "when": "값 범위가 커서 배열 인덱스로 못 쓸 때",
+        "complexity": "질의당 O(log N)"
+      },
+      {
+        "name": "배열 정렬",
+        "signature": "sort(a, a + n); / sort(a + 1, a + n + 1);",
+        "does": "포인터 범위로 정렬해요. 1-based 면 a+1 부터예요.",
+        "when": "C 배열을 쓸 때",
+        "complexity": "O(N log N)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "점수 내림차순, 같으면 이름 오름차순",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    vector<pair<string, int>> v(n);\n    for (auto& [name, score] : v) cin >> name >> score;\n    sort(v.begin(), v.end(), [](const auto& a, const auto& b) {\n        if (a.second != b.second) return a.second > b.second;\n        return a.first < b.first;\n    });\n    for (auto& [name, score] : v) cout << name << ' ' << score << '\\n';\n    return 0;\n}\n",
+        "stdin": "5\nyuna 90\nbora 75\nalex 90\ndami 75\ncody 100\n",
+        "output": "cody 100\nalex 90\nyuna 90\nbora 75\ndami 75\n"
+      },
+      {
+        "title": "pair 로 여러 기준, stable_sort 로 입력 순서 유지",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    vector<pair<int, string>> v = {{-90, \"yuna\"}, {-75, \"bora\"}, {-90, \"alex\"}};\n    sort(v.begin(), v.end());  // 점수(부호 반전) 오름차순, 같으면 이름 오름차순\n    for (auto& [s, name] : v) cout << name << ' ' << -s << '\\n';\n\n    vector<string> w = {\"kiwi\", \"fig\", \"apple\", \"date\", \"pear\"};\n    stable_sort(w.begin(), w.end(), [](const string& a, const string& b) {\n        return a.size() < b.size();\n    });\n    for (auto& s : w) cout << s << ' ';\n    cout << '\\n';\n    return 0;\n}\n",
+        "output": "alex 90\nyuna 90\nbora 75\nfig kiwi date pear apple \n"
+      },
+      {
+        "title": "좌표 압축: 정렬, unique+erase, lower_bound",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    vector<int> a = {1000000000, -5, 42, 42, 7};\n    vector<int> xs = a;\n    sort(xs.begin(), xs.end());\n    xs.erase(unique(xs.begin(), xs.end()), xs.end());\n    for (int x : xs) cout << x << ' ';\n    cout << '\\n';\n    for (int x : a) cout << lower_bound(xs.begin(), xs.end(), x) - xs.begin() << ' ';\n    cout << '\\n';\n    return 0;\n}\n",
+        "output": "-5 7 42 1000000000 \n3 0 2 2 1 \n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "sort(v.begin(), v.end(), [](int a, int b) { return a <= b; });",
+        "right": "sort(v.begin(), v.end(), [](int a, int b) { return a < b; });",
+        "why": "비교 함수는 같은 값에 false 를 돌려줘야 해요(strict weak ordering). <= 를 쓰면 정의되지 않은 동작이라 같은 값이 많을 때 범위 밖 접근이나 크래시가 날 수 있어요."
+      },
+      {
+        "wrong": "unique(v.begin(), v.end());\ncout << v.size();",
+        "right": "v.erase(unique(v.begin(), v.end()), v.end());",
+        "why": "unique 는 중복을 뒤로 밀고 새 끝 반복자만 돌려줘요. erase 하지 않으면 크기가 그대로이고 뒤에 쓰레기 값이 남아요."
+      },
+      {
+        "wrong": "// a[1..n] 에 입력했는데\nsort(a, a + n);",
+        "right": "sort(a + 1, a + n + 1);",
+        "why": "1-based 로 받았다면 a[0](보통 0)이 정렬에 섞이고 a[n] 은 빠져요."
+      },
+      {
+        "wrong": "sort(v.begin(), v.end(), [](auto a, auto b) { ... });\n// 원소가 string, vector 일 때",
+        "right": "sort(v.begin(), v.end(), [](const auto& a, const auto& b) { ... });",
+        "why": "값으로 받으면 비교할 때마다 복사가 일어나 N log N 번 복사로 느려져요. const 참조로 받아요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "기준이 하나(오름·내림)",
+      "use": "sort() / sorted(reverse=True), C++ sort + greater<>()"
+    },
+    {
+      "situation": "기준이 여러 개",
+      "use": "Python 튜플 key(숫자는 부호 반전), C++ 람다 또는 pair/tuple"
+    },
+    {
+      "situation": "같은 키일 때 입력 순서를 지켜야 함",
+      "use": "Python 기본 정렬(안정), C++ stable_sort"
+    },
+    {
+      "situation": "두 원소를 직접 비교해야만 순서가 정해짐",
+      "use": "Python cmp_to_key, C++ 람다 비교"
+    },
+    {
+      "situation": "값이 크고 순위만 중요",
+      "use": "좌표 압축(정렬 + 중복 제거 + 이분 탐색 또는 dict)"
+    },
+    {
+      "situation": "가장 작은 값을 넣고 빼며 계속 꺼냄",
+      "use": "정렬 대신 힙"
+    }
+  ],
+  "checklist": [
+    "Python sort() 는 None 반환: a = a.sort() 하지 않기",
+    "여러 기준에서 reverse=True 대신 부호 반전을 썼는지",
+    "숫자를 문자열 그대로 정렬하지 않았는지(int 변환)",
+    "C++ 비교 함수에 <= 가 아니라 < 를 썼는지",
+    "unique 뒤에 erase 를 했는지",
+    "1-based 배열이면 sort(a + 1, a + n + 1)",
+    "동점 처리 규칙(입력 순서? 이름 순?)을 문제에서 확인했는지"
+  ]
+}

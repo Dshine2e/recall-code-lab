@@ -1,0 +1,254 @@
+{
+  "slug": "heap",
+  "title": "힙(우선순위 큐)",
+  "category": "자료구조",
+  "order": 4,
+  "summary": "가장 작은(큰) 값을 계속 꺼낼 때 써요. 넣기·빼기 O(log N), 맨 위 보기 O(1)이에요.",
+  "when": [
+    "값을 넣고 빼는 중에 매번 가장 작은(큰) 값을 꺼내야 할 때",
+    "마감·우선순위가 급한 작업부터 처리하는 스케줄링",
+    "다익스트라처럼 거리가 가장 짧은 후보부터 꺼낼 때",
+    "N개 중 상위·하위 K개만 유지할 때(크기 K 힙)",
+    "여러 정렬된 목록을 하나로 합칠 때"
+  ],
+  "topics": [
+    "힙",
+    "우선순위 큐"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "heapq.heappush",
+        "signature": "heapq.heappush(h, x)",
+        "does": "리스트 h 를 최소 힙으로 유지하며 x 를 넣어요.",
+        "when": "힙에 값 추가",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "heapq.heappop",
+        "signature": "heapq.heappop(h)",
+        "does": "가장 작은 값을 꺼내 돌려줘요. 비어 있으면 IndexError 예요.",
+        "when": "최솟값 꺼내기",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "h[0]",
+        "signature": "h[0]",
+        "does": "가장 작은 값을 꺼내지 않고 봐요. h[1] 이 두 번째로 작은 값은 아니에요.",
+        "when": "맨 위 확인",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "heapq.heapify",
+        "signature": "heapq.heapify(lst)",
+        "does": "리스트를 그 자리에서 힙으로 바꿔요. 반환값은 None 이에요.",
+        "when": "값이 처음부터 다 있을 때(N번 push 보다 빠름)",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "heapq.heappushpop",
+        "signature": "heapq.heappushpop(h, x)",
+        "does": "x 를 넣은 뒤 가장 작은 값을 꺼내요(따로 하는 것보다 빠름).",
+        "when": "크기 K 를 유지하며 상위 K개를 남길 때",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "heapq.heapreplace",
+        "signature": "heapq.heapreplace(h, x)",
+        "does": "가장 작은 값을 먼저 꺼낸 뒤 x 를 넣어요. 비어 있으면 IndexError 예요.",
+        "when": "맨 위를 다른 값으로 바꿀 때",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "heapq.nlargest / nsmallest",
+        "signature": "heapq.nlargest(k, iterable, key=None)",
+        "does": "큰(작은) 값 k개를 정렬된 리스트로 돌려줘요.",
+        "when": "한 번만 상위 k개가 필요할 때",
+        "complexity": "O(N log k)"
+      },
+      {
+        "name": "튜플 우선순위",
+        "signature": "heapq.heappush(h, (우선순위, 순번, 값))",
+        "does": "튜플은 앞 원소부터 비교해요. 순번을 끼우면 동점일 때 넣은 순서로 나와요.",
+        "when": "(거리, 노드), (마감, 이름) 같은 기준",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "최대 힙",
+        "signature": "heapq.heappush(h, -x); -heapq.heappop(h)",
+        "does": "부호를 바꿔 넣고 꺼낼 때 다시 바꿔요.",
+        "when": "가장 큰 값을 꺼내야 할 때",
+        "complexity": "O(log N)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "최소 힙과 부호를 바꾼 최대 힙",
+        "code": "import heapq\n\na = [5, 1, 8, 3, 2]\nh = a[:]\nheapq.heapify(h)\nprint(h[0], [heapq.heappop(h) for _ in range(len(h))])\n\nmx = []\nfor x in a:\n    heapq.heappush(mx, -x)\nprint(-mx[0], [-heapq.heappop(mx) for _ in range(len(mx))])\n",
+        "output": "1 [1, 2, 3, 5, 8]\n8 [8, 5, 3, 2, 1]\n"
+      },
+      {
+        "title": "마감이 빠른 작업부터, 같으면 들어온 순서",
+        "code": "import heapq\nimport sys\n\ndata = sys.stdin.read().split()\nn = int(data[0])\nh = []\nfor i in range(n):\n    name, due = data[1 + 2 * i], int(data[2 + 2 * i])\n    heapq.heappush(h, (due, i, name))\nwhile h:\n    due, _, name = heapq.heappop(h)\n    print(due, name)\n",
+        "stdin": "5\nwash 3\nmail 1\ncook 3\nread 2\nnap 1\n",
+        "output": "1 mail\n1 nap\n2 read\n3 wash\n3 cook\n"
+      },
+      {
+        "title": "크기 K 최소 힙으로 큰 값 K개 유지",
+        "code": "import heapq\n\nstream = [4, 9, 1, 7, 3, 9, 6, 2]\nk = 3\ntop = []\nfor x in stream:\n    if len(top) < k:\n        heapq.heappush(top, x)\n    elif x > top[0]:\n        heapq.heapreplace(top, x)\n    print(x, \"->\", sorted(top, reverse=True))\n",
+        "output": "4 -> [4]\n9 -> [9, 4]\n1 -> [9, 4, 1]\n7 -> [9, 7, 4]\n3 -> [9, 7, 4]\n9 -> [9, 9, 7]\n6 -> [9, 9, 7]\n2 -> [9, 9, 7]\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "heapq.heappush(h, x)\nbiggest = heapq.heappop(h)  # 최댓값을 기대",
+        "right": "heapq.heappush(h, -x)\nbiggest = -heapq.heappop(h)",
+        "why": "heapq 는 최소 힙만 있어요. 최대 힙이 필요하면 부호를 바꿔 넣어요(C++ priority_queue 는 반대로 기본이 최대 힙)."
+      },
+      {
+        "wrong": "h = heapq.heapify(arr)",
+        "right": "heapq.heapify(arr)\nh = arr",
+        "why": "heapify 는 그 자리에서 바꾸고 None 을 돌려줘요. h 가 None 이 돼요."
+      },
+      {
+        "wrong": "h = [3, 1, 2]; heapq.heapify(h)\nsecond = h[1]   # 두 번째로 작은 값?",
+        "right": "two = heapq.nsmallest(2, h)\nsecond = two[1]",
+        "why": "힙은 h[0] 만 최솟값이 보장돼요. 이 예에서 h 는 [1, 3, 2] 라 h[1] 은 3 이에요."
+      },
+      {
+        "wrong": "heapq.heappush(h, (1, {'id': 7}))\nheapq.heappush(h, (1, {'id': 8}))",
+        "right": "heapq.heappush(h, (1, cnt, {'id': 8}))  # cnt 는 매번 1 증가",
+        "why": "우선순위가 같으면 다음 원소를 비교하는데 dict 끼리는 비교할 수 없어 TypeError 가 나요. 사이에 순번을 넣어요."
+      },
+      {
+        "wrong": "# 힙 안의 거리를 직접 고치려고 함\nh[idx] = (new_d, v)",
+        "right": "heapq.heappush(h, (new_d, v))\n# 꺼낼 때: d, v = heappop(h)\n# if d > dist[v]: continue",
+        "why": "힙 안의 값을 고치면 힙 순서가 깨져요. 새 값을 하나 더 넣고, 꺼낼 때 최신이 아닌 것은 건너뛰어요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "priority_queue (최대 힙)",
+        "signature": "priority_queue<T> pq;",
+        "does": "기본이 최대 힙이에요. top() 이 가장 큰 값이에요.",
+        "when": "가장 큰 값을 계속 꺼낼 때",
+        "complexity": "push·pop O(log N), top O(1)"
+      },
+      {
+        "name": "최소 힙",
+        "signature": "priority_queue<T, vector<T>, greater<T>> pq;",
+        "does": "greater 를 주면 top() 이 가장 작은 값이에요.",
+        "when": "다익스트라, 마감 빠른 순",
+        "complexity": "push·pop O(log N)"
+      },
+      {
+        "name": "top / pop",
+        "signature": "pq.top(); pq.pop();",
+        "does": "top 은 맨 위를 보고, pop 은 맨 위를 지워요(void). 비어 있으면 정의되지 않은 동작이에요.",
+        "when": "꺼내기: top 을 읽고 pop",
+        "complexity": "top O(1), pop O(log N)"
+      },
+      {
+        "name": "pair 우선순위",
+        "signature": "priority_queue<pair<int,int>, vector<pair<int,int>>, greater<>> pq;",
+        "does": "pair 는 first, 그다음 second 순으로 비교해요.",
+        "when": "(거리, 노드), (마감, 순번)",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "비교 구조체",
+        "signature": "struct Cmp { bool operator()(const T& a, const T& b) const { ... } };",
+        "does": "a 가 b 보다 '나중에 나와야' 하면 true 를 돌려줘요. a > b 로 쓰면 작은 값이 먼저 나와요.",
+        "when": "여러 기준이 섞인 우선순위",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "범위로 만들기",
+        "signature": "priority_queue<T> pq(v.begin(), v.end());",
+        "does": "값을 한꺼번에 넣어 힙을 만들어요.",
+        "when": "값이 처음부터 다 있을 때",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "empty / size",
+        "signature": "pq.empty() / pq.size()",
+        "does": "비었는지, 몇 개인지 알려 줘요.",
+        "when": "top() 전에 확인",
+        "complexity": "O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "기본은 최대 힙, greater 로 최소 힙",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    vector<int> a = {5, 1, 8, 3, 2};\n    priority_queue<int> mx(a.begin(), a.end());\n    priority_queue<int, vector<int>, greater<int>> mn(a.begin(), a.end());\n    cout << \"max:\";\n    while (!mx.empty()) { cout << ' ' << mx.top(); mx.pop(); }\n    cout << \"\\nmin:\";\n    while (!mn.empty()) { cout << ' ' << mn.top(); mn.pop(); }\n    cout << '\\n';\n    return 0;\n}\n",
+        "output": "max: 8 5 3 2 1\nmin: 1 2 3 5 8\n"
+      },
+      {
+        "title": "마감이 빠른 작업부터, 같으면 들어온 순서",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    vector<string> name(n);\n    // (마감, 순번) 최소 힙\n    priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> pq;\n    for (int i = 0; i < n; i++) {\n        int due;\n        cin >> name[i] >> due;\n        pq.push({due, i});\n    }\n    while (!pq.empty()) {\n        auto [due, i] = pq.top();\n        pq.pop();\n        cout << due << ' ' << name[i] << '\\n';\n    }\n    return 0;\n}\n",
+        "stdin": "5\nwash 3\nmail 1\ncook 3\nread 2\nnap 1\n",
+        "output": "1 mail\n1 nap\n2 read\n3 wash\n3 cook\n"
+      },
+      {
+        "title": "비교 구조체: 점수 높은 순, 같으면 이름 사전 순",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nstruct P {\n    string name;\n    int score;\n};\nstruct Cmp {\n    // true 면 a 가 b 보다 나중에 나온다\n    bool operator()(const P& a, const P& b) const {\n        if (a.score != b.score) return a.score < b.score;\n        return a.name > b.name;\n    }\n};\n\nint main() {\n    priority_queue<P, vector<P>, Cmp> pq;\n    pq.push({\"kim\", 80});\n    pq.push({\"lee\", 95});\n    pq.push({\"choi\", 80});\n    pq.push({\"park\", 95});\n    while (!pq.empty()) {\n        cout << pq.top().name << ' ' << pq.top().score << '\\n';\n        pq.pop();\n    }\n    return 0;\n}\n",
+        "output": "lee 95\npark 95\nchoi 80\nkim 80\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "priority_queue<int> pq;  // 가장 작은 값을 기대",
+        "right": "priority_queue<int, vector<int>, greater<int>> pq;",
+        "why": "priority_queue 는 기본이 최대 힙이에요(Python heapq 는 반대로 최소 힙). 다익스트라에 기본형을 쓰면 먼 것부터 꺼내 틀리거나 느려져요."
+      },
+      {
+        "wrong": "// 작은 값이 먼저 나오길 원하며\nreturn a.d < b.d;",
+        "right": "return a.d > b.d;",
+        "why": "비교 함수가 true 면 a 가 뒤로 가요. sort 와 방향이 반대라 헷갈리기 쉬워요. 작은 값이 먼저 나오려면 > 를 써요."
+      },
+      {
+        "wrong": "int x = pq.pop();",
+        "right": "int x = pq.top();\npq.pop();",
+        "why": "pop() 은 void 라 컴파일 오류가 나요."
+      },
+      {
+        "wrong": "auto [d, v] = pq.top(); pq.pop();\n// 오래된 항목도 그대로 처리",
+        "right": "auto [d, v] = pq.top(); pq.pop();\nif (d > dist[v]) continue;",
+        "why": "priority_queue 안의 값은 고칠 수 없어서 같은 노드가 여러 번 들어가요. 최신이 아닌 항목을 건너뛰지 않으면 시간이 크게 늘어요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "넣고 빼는 중에 매번 최솟값·최댓값이 필요",
+      "use": "힙(heapq / priority_queue)"
+    },
+    {
+      "situation": "처음에 한 번 정렬하면 끝이고 새 값이 안 들어옴",
+      "use": "힙 대신 정렬"
+    },
+    {
+      "situation": "최솟값과 최댓값을 둘 다 꺼내거나 임의 값을 지워야 함",
+      "use": "C++ multiset(O(log N)), Python 은 힙 두 개 + 지연 삭제"
+    },
+    {
+      "situation": "상위 K개만 유지",
+      "use": "크기 K 최소 힙(K개를 넘으면 가장 작은 것을 뺌)"
+    },
+    {
+      "situation": "간선 가중치가 모두 같은 최단 거리",
+      "use": "힙 대신 BFS(큐)"
+    }
+  ],
+  "checklist": [
+    "최소 힙인지 최대 힙인지: heapq 는 최소, priority_queue 는 최대",
+    "heapify 반환값(None)을 변수에 받지 않았는지",
+    "튜플·pair 의 첫 원소가 정말 우선순위 기준인지",
+    "동점일 때 비교할 수 없는 값(dict, 객체)이 튜플에 있지 않은지",
+    "비교 구조체 방향: true 면 뒤로 간다",
+    "꺼낸 항목이 최신인지(지연 삭제) 확인했는지",
+    "빈 힙에서 top()/heappop 을 부르지 않는지"
+  ]
+}
