@@ -32,6 +32,10 @@ jobs:
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "problems/$DATE.json 이 이미 있어 건너뜁니다."
           fi
+          # 누적 비율 3:5:2 에 맞춘 오늘의 난이도 조합(생성 전 기준)
+          PLAN=$(python3 tools/stats.py --plan --exclude-date "$DATE")
+          echo "plan=$PLAN" >> "$GITHUB_OUTPUT"
+          echo "오늘의 난이도 계획: $PLAN"
 
       - name: 도구 확인
         if: steps.check.outputs.exists != 'true'
@@ -43,7 +47,7 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          prompt: "CLAUDE.md의 일일 문제 생성 절차를 수행해"
+          prompt: "CLAUDE.md의 일일 문제 생성 절차를 수행해. 오늘의 난이도 조합(tools/stats.py --plan)은 '${{ steps.check.outputs.plan }}' 이다."
           claude_args: |
             --model claude-opus-5-5
             --max-turns 200
@@ -53,6 +57,7 @@ jobs:
         if: steps.check.outputs.exists != 'true'
         env:
           DATE: ${{ steps.check.outputs.date }}
+          PLAN: ${{ steps.check.outputs.plan }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -82,13 +87,18 @@ jobs:
               git clean -fdq -- concepts
             fi
           fi
+          # 오늘 만든 난이도 조합이 계획(누적 3:5:2)과 다르면 경고만 남긴다(다음 날 계획이 다시 맞춘다).
+          GOT=$(python3 -c "import json,sys; print(' '.join(p['difficulty'] for p in json.load(open(sys.argv[1], encoding='utf-8'))))" "problems/$DATE.json")
+          echo "오늘의 난이도: $GOT (계획: $PLAN)"
+          if [ "$GOT" != "$PLAN" ]; then echo "::warning::난이도 조합이 계획과 다릅니다: $GOT (계획: $PLAN)"; fi
           echo "## 문제 통계" >> "$GITHUB_STEP_SUMMARY"
+          echo "오늘의 난이도: $GOT (계획: $PLAN)" >> "$GITHUB_STEP_SUMMARY"
           python3 tools/stats.py | tee -a "$GITHUB_STEP_SUMMARY"
 
           # 3) 아직 커밋되지 않은 변경이 있으면 커밋하고, main 에 없는 커밋이 있으면 푸시한다.
           if [ -n "$(git status --porcelain -- problems .solutions concepts)" ]; then
             git add problems .solutions concepts
-            git commit -m "daily: $DATE 문제 3개 추가 (입문/기본/도전)"
+            git commit -m "daily: $DATE 문제 3개 추가 (${GOT// //})"
           fi
           ahead=$(git rev-list --count origin/main..HEAD)
           if [ "$ahead" -gt 0 ]; then

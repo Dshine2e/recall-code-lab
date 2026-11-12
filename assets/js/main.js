@@ -843,9 +843,10 @@ function renderConcept(slug) {
   setCrumb([{ label: '개념서', href: '#concepts' }, { label: '불러오는 중…' }]);
   const isCurrent = claimView();
   viewEl.innerHTML = '<div class="loading">개념을 불러오는 중이에요…</div>';
-  Promise.all([loadConceptIndex(), loadConcept(slug).catch(() => null)]).then(([index, c]) => {
+  // 목록에 없는 slug 는 파일을 요청하지 않는다(불필요한 404 방지).
+  loadConceptIndex().then((index) => (index.some((x) => x.slug === slug) ? loadConcept(slug).catch(() => null) : null)).then((c) => {
     if (!isCurrent()) return;
-    if (!c || !index.some((x) => x.slug === slug)) {
+    if (!c) {
       setCrumb([{ label: '개념서', href: '#concepts' }, { label: '찾을 수 없음' }]);
       viewEl.innerHTML = `
         <div class="card empty-state">
