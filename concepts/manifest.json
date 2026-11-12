@@ -65,6 +65,15 @@
       ]
     },
     {
+      "slug": "segment-fenwick",
+      "title": "세그먼트 트리·펜윅 트리",
+      "category": "자료구조",
+      "summary": "값이 바뀌는 배열에서 구간 합·최솟값을 O(log N)에 구해요. 합은 펜윅, 그 밖은 세그먼트 트리예요.",
+      "topics": [
+        "펜윅"
+      ]
+    },
+    {
       "slug": "two-pointers",
       "title": "투 포인터·슬라이딩 윈도우",
       "category": "탐색",
@@ -94,6 +103,53 @@
       "topics": [
         "누적 합",
         "차분 배열"
+      ]
+    },
+    {
+      "slug": "bitmask",
+      "title": "비트마스크",
+      "category": "알고리즘",
+      "summary": "정수 하나의 비트로 집합을 나타내요. 모든 부분집합 돌기와 상태를 압축한 DP 에 써요.",
+      "topics": [
+        "비트마스크"
+      ]
+    },
+    {
+      "slug": "shortest-path",
+      "title": "최단 경로",
+      "category": "그래프",
+      "summary": "가중치가 있는 그래프의 최단 거리를 다익스트라·0-1 BFS·플로이드·벨만-포드 중 골라 구해요.",
+      "topics": [
+        "다익스트라"
+      ]
+    },
+    {
+      "slug": "union-find",
+      "title": "유니온 파인드",
+      "category": "그래프",
+      "summary": "원소를 그룹으로 합치고 같은 그룹인지 거의 상수 시간에 확인해요. 크루스칼 MST의 핵심이에요.",
+      "topics": [
+        "유니온 파인드",
+        "크루스칼"
+      ]
+    },
+    {
+      "slug": "topological-sort",
+      "title": "위상 정렬",
+      "category": "그래프",
+      "summary": "선후 관계가 있는 일을 순서대로 줄 세워요. 진입 차수와 큐로 풀고 사이클도 함께 찾아요.",
+      "topics": [
+        "위상 정렬"
+      ]
+    },
+    {
+      "slug": "math-tools",
+      "title": "수학 도구(gcd, 소수, 모듈러, 거듭제곱)",
+      "category": "수학",
+      "summary": "gcd·lcm, 소수 판정과 체, 약수 나열, 모듈러 연산, 빠른 거듭제곱을 바로 꺼내 써요.",
+      "topics": [
+        "약수",
+        "소수 판정"
       ]
     },
     {

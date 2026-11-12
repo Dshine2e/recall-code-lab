@@ -1,0 +1,246 @@
+{
+  "slug": "math-tools",
+  "title": "수학 도구(gcd, 소수, 모듈러, 거듭제곱)",
+  "category": "수학",
+  "order": 1,
+  "summary": "gcd·lcm, 소수 판정과 체, 약수 나열, 모듈러 연산, 빠른 거듭제곱을 바로 꺼내 써요.",
+  "when": [
+    "약수·배수, 최대공약수·최소공배수를 다룰 때",
+    "어떤 수가 소수인지, 범위 안의 소수를 모두 구할 때",
+    "답을 1,000,000,007 로 나눈 나머지로 출력하라고 할 때",
+    "a^b 를 빠르게 구하거나 나머지 연산 안에서 나눗셈(역원)이 필요할 때",
+    "음수를 나누거나 음수의 나머지를 구할 때"
+  ],
+  "topics": [
+    "약수",
+    "소수 판정"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "math.gcd / math.lcm",
+        "signature": "math.gcd(a, b)  # 3.9+: math.gcd(*nums), math.lcm(*nums)",
+        "does": "최대공약수와 최소공배수를 구해요. 유클리드 호제법이에요.",
+        "when": "분수 약분, 주기 맞추기, 여러 수의 공약수를 구할 때 써요.",
+        "complexity": "O(log min(a, b))"
+      },
+      {
+        "name": "소수 판정",
+        "signature": "i = 2\nwhile i * i <= x:\n    if x % i == 0: return False\n    i += 1",
+        "does": "√x 까지만 나눠 봐요. 0 과 1 은 먼저 걸러요.",
+        "when": "소수인지 볼 수가 몇 개 안 될 때 써요.",
+        "complexity": "O(√N)"
+      },
+      {
+        "name": "에라토스테네스의 체",
+        "signature": "sieve = [True] * (N + 1)\nsieve[i * i::i] = [False] * len(range(i * i, N + 1, i))",
+        "does": "2부터 소수의 배수를 지워 0..N 의 소수 여부를 한 번에 구해요. 슬라이스 대입이 반복문보다 빨라요.",
+        "when": "N 이 수백만 이하이고 소수를 많이 물을 때 써요.",
+        "complexity": "O(N log log N)"
+      },
+      {
+        "name": "약수 나열",
+        "signature": "while i * i <= n:\n    if n % i == 0: divs += [i, n // i]",
+        "does": "i 와 n // i 를 짝으로 넣어요. i == n // i 이면 한 번만 넣어요.",
+        "when": "약수 개수·합을 구할 때 써요.",
+        "complexity": "O(√N)"
+      },
+      {
+        "name": "pow(a, b, m)",
+        "signature": "pow(a, b, m)",
+        "does": "a^b 를 m 으로 나눈 나머지를 빠른 거듭제곱으로 구해요.",
+        "when": "지수가 크거나 나머지를 출력해야 할 때 써요.",
+        "complexity": "O(log b)"
+      },
+      {
+        "name": "모듈러 역원",
+        "signature": "pow(a, -1, m)  # 3.8+",
+        "does": "a · x ≡ 1 (mod m) 인 x 를 구해요. gcd(a, m) = 1 이어야 해요(아니면 ValueError).",
+        "when": "나머지 연산 안에서 a 로 나눠야 할 때 써요.",
+        "complexity": "O(log m)"
+      },
+      {
+        "name": "// 와 %",
+        "signature": "a // b, a % b, divmod(a, b)",
+        "does": "// 는 내림(음의 무한대 쪽), % 는 b 와 같은 부호예요. b > 0 이면 % 는 항상 0..b-1 이에요.",
+        "when": "음수 나머지도 바로 0..b-1 로 받고 싶을 때 그대로 써요.",
+        "complexity": "O(1) (큰 정수는 자릿수에 비례)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "gcd·lcm, 빠른 거듭제곱, 역원, 약수",
+        "code": "import math\n\nMOD = 1_000_000_007\na, b = 84, 120\nprint('gcd', math.gcd(a, b))\nprint('lcm', a // math.gcd(a, b) * b)    # Python 3.9+ 은 math.lcm(a, b) 도 돼요\n\nprint('2^10', pow(2, 10))\nprint('3^200 % MOD', pow(3, 200, MOD))   # 세 번째 인자로 나머지를 바로 구해요\n\ninv = pow(5, -1, MOD)                    # 모듈러 역원 (Python 3.8+, gcd(5, MOD) = 1)\nprint('5의 역원', inv, (5 * inv) % MOD)\nprint('10 / 5 (mod)', 10 * inv % MOD)\n\n# 약수 나열: i * i <= n 까지만 보고 짝을 같이 넣기\nn = 36\ndivs = []\ni = 1\nwhile i * i <= n:\n    if n % i == 0:\n        divs.append(i)\n        if i != n // i:\n            divs.append(n // i)\n    i += 1\nprint('36의 약수', sorted(divs))\n",
+        "output": "gcd 12\nlcm 840\n2^10 1024\n3^200 % MOD 136318165\n5의 역원 400000003 1\n10 / 5 (mod) 2\n36의 약수 [1, 2, 3, 4, 6, 9, 12, 18, 36]\n"
+      },
+      {
+        "title": "소수 판정과 에라토스테네스의 체",
+        "code": "def is_prime(x):\n    if x < 2:                            # 0, 1 은 소수가 아니에요\n        return False\n    i = 2\n    while i * i <= x:\n        if x % i == 0:\n            return False\n        i += 1\n    return True\n\n\nprint([x for x in [1, 2, 9, 17, 97, 1_000_000_007] if is_prime(x)])\n\n# 에라토스테네스의 체: 0..N 의 소수 여부를 한 번에\nN = 50\nsieve = [True] * (N + 1)\nsieve[0] = sieve[1] = False\nfor i in range(2, int(N ** 0.5) + 1):\n    if sieve[i]:\n        sieve[i * i::i] = [False] * len(range(i * i, N + 1, i))\nprimes = [i for i in range(N + 1) if sieve[i]]\nprint(len(primes), primes)\n",
+        "output": "[2, 17, 97, 1000000007]\n15 [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]\n"
+      },
+      {
+        "title": "음수의 몫과 나머지",
+        "code": "# Python: // 는 내림(음의 무한대 쪽), % 의 부호는 나누는 수를 따라가요\nfor a, b in [(7, 2), (-7, 2), (7, -2), (-7, -2)]:\n    print(a, b, a // b, a % b)\n\nMOD = 5\nx = -12\nprint('나머지', x % MOD)                 # 이미 0..MOD-1 이에요\nprint('0 쪽으로 자른 몫', int(-7 / 2))   # 작은 수에서만: 큰 정수는 실수 오차가 생겨요\n",
+        "output": "7 2 3 1\n-7 2 -4 1\n7 -2 -4 -1\n-7 -2 3 -1\n나머지 3\n0 쪽으로 자른 몫 -3\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "q = int(a / b)  # a = 10 ** 18 + 1, b = 1",
+        "right": "q = a // b",
+        "why": "/ 는 실수(float) 나눗셈이라 2^53 보다 큰 정수에서 오차가 나요. 10 ** 18 + 1 이 1000000000000000000 이 돼요."
+      },
+      {
+        "wrong": "print(-7 // 2)  # C++ 처럼 -3 을 기대",
+        "right": "print(-7 // 2)  # -4: 내림이에요\nprint(-(7 // 2))  # -3 이 필요하면 절댓값으로 나눈 뒤 부호 붙이기",
+        "why": "Python // 는 내림이라 -7 // 2 는 -4, -7 % 2 는 1 이에요. C++ 는 -3 과 -1 이에요."
+      },
+      {
+        "wrong": "pow(a, b) % m  # b 가 크면",
+        "right": "pow(a, b, m)",
+        "why": "pow(a, b) 는 엄청나게 큰 정수를 다 만든 뒤 나눠서 느려요(b = 10^6 만 돼도 수십만 자리). 세 번째 인자를 쓰면 바로 나머지로 계산해요."
+      },
+      {
+        "wrong": "def is_prime(x):\n    for i in range(2, int(x ** 0.5) + 1):\n        if x % i == 0: return False\n    return True",
+        "right": "def is_prime(x):\n    if x < 2: return False\n    ...",
+        "why": "x 가 0 이나 1 이면 반복이 한 번도 돌지 않아 True 가 나와요."
+      },
+      {
+        "wrong": "lcm = a * b // math.gcd(a, b)",
+        "right": "lcm = a // math.gcd(a, b) * b",
+        "why": "Python 은 넘치지 않아 둘 다 맞지만, 먼저 나누면 중간 값이 작아요. C++ 로 옮길 때는 먼저 나누는 쪽이 안전해요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "std::gcd / std::lcm",
+        "signature": "gcd(a, b), lcm(a, b)  // C++17 <numeric>",
+        "does": "최대공약수와 최소공배수를 구해요. 두 인자의 타입을 맞추면 헷갈리지 않아요.",
+        "when": "분수 약분, 주기 맞추기에 써요.",
+        "complexity": "O(log min(a, b))"
+      },
+      {
+        "name": "소수 판정",
+        "signature": "for (long long i = 2; i * i <= x; i++) if (x % i == 0) return false;",
+        "does": "√x 까지만 나눠 봐요. x < 2 는 먼저 걸러요.",
+        "when": "소수인지 볼 수가 몇 개 안 될 때 써요.",
+        "complexity": "O(√N)"
+      },
+      {
+        "name": "에라토스테네스의 체",
+        "signature": "vector<bool> sieve(N + 1, true);\nfor (int j = i * i; j <= N; j += i) sieve[j] = false;",
+        "does": "2부터 소수의 배수를 지워 0..N 의 소수 여부를 한 번에 구해요.",
+        "when": "N 이 수백만~천만 정도이고 소수를 많이 물을 때 써요.",
+        "complexity": "O(N log log N)"
+      },
+      {
+        "name": "약수 나열",
+        "signature": "for (long long i = 1; i * i <= n; i++) if (n % i == 0) { ... i, n / i ... }",
+        "does": "i 와 n / i 를 짝으로 넣어요. 같으면 한 번만 넣어요.",
+        "when": "약수 개수·합을 구할 때 써요.",
+        "complexity": "O(√N)"
+      },
+      {
+        "name": "빠른 거듭제곱",
+        "signature": "long long power(long long b, long long e, long long m)",
+        "does": "지수를 반씩 줄이며 제곱해 a^b % m 을 구해요. 곱할 때마다 % m 해요.",
+        "when": "지수가 크거나 나머지를 출력해야 할 때 써요. 표준 함수가 없어서 직접 써요.",
+        "complexity": "O(log b)"
+      },
+      {
+        "name": "모듈러 역원(페르마)",
+        "signature": "power(a, MOD - 2, MOD)",
+        "does": "MOD 가 소수이고 a 가 MOD 의 배수가 아니면 a^(MOD-2) 가 역원이에요.",
+        "when": "나머지 연산 안에서 a 로 나눠야 할 때 써요(조합 nCr 등).",
+        "complexity": "O(log MOD)"
+      },
+      {
+        "name": "/ 와 %",
+        "signature": "a / b, a % b",
+        "does": "/ 는 0 쪽으로 자르고, % 는 a 와 같은 부호예요. -7 / 2 == -3, -7 % 2 == -1 이에요.",
+        "when": "음수가 나올 수 있으면 ((a % m) + m) % m 으로 0..m-1 에 맞춰요.",
+        "complexity": "O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "gcd·lcm, 빠른 거듭제곱, 역원, 약수",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nconst long long MOD = 1'000'000'007;\n\nlong long power(long long base, long long exp, long long mod) {   // 빠른 거듭제곱\n    long long result = 1;\n    base %= mod;\n    while (exp > 0) {\n        if (exp & 1) result = result * base % mod;\n        base = base * base % mod;        // mod < 2^31 이라 곱해도 long long 안이에요\n        exp >>= 1;\n    }\n    return result;\n}\n\nint main() {\n    long long a = 84, b = 120;\n    cout << \"gcd \" << gcd(a, b) << '\\n';         // C++17 <numeric>\n    cout << \"lcm \" << a / gcd(a, b) * b << '\\n'; // lcm(a, b) 도 있어요\n\n    cout << \"2^10 \" << power(2, 10, MOD) << '\\n';\n    cout << \"3^200 % MOD \" << power(3, 200, MOD) << '\\n';\n\n    long long inv = power(5, MOD - 2, MOD);      // MOD 가 소수일 때 페르마 소정리로 역원\n    cout << \"5의 역원 \" << inv << ' ' << 5 * inv % MOD << '\\n';\n    cout << \"10 / 5 (mod) \" << 10 * inv % MOD << '\\n';\n\n    // 약수 나열: i * i <= n 까지만 보고 짝을 같이 넣기\n    long long n = 36;\n    vector<long long> divs;\n    for (long long i = 1; i * i <= n; i++) {\n        if (n % i == 0) {\n            divs.push_back(i);\n            if (i != n / i) divs.push_back(n / i);\n        }\n    }\n    sort(divs.begin(), divs.end());\n    cout << \"36의 약수\";\n    for (long long d : divs) cout << ' ' << d;\n    cout << '\\n';\n    return 0;\n}\n",
+        "output": "gcd 12\nlcm 840\n2^10 1024\n3^200 % MOD 136318165\n5의 역원 400000003 1\n10 / 5 (mod) 2\n36의 약수 1 2 3 4 6 9 12 18 36\n"
+      },
+      {
+        "title": "소수 판정과 에라토스테네스의 체",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nbool isPrime(long long x) {\n    if (x < 2) return false;             // 0, 1 은 소수가 아니에요\n    for (long long i = 2; i * i <= x; i++)   // i 를 long long 으로 둬야 i * i 가 안 넘쳐요\n        if (x % i == 0) return false;\n    return true;\n}\n\nint main() {\n    vector<long long> xs = {1, 2, 9, 17, 97, 1000000007};\n    for (long long x : xs)\n        if (isPrime(x)) cout << x << ' ';\n    cout << '\\n';\n\n    // 에라토스테네스의 체: 0..N 의 소수 여부를 한 번에\n    int N = 50;\n    vector<bool> sieve(N + 1, true);\n    sieve[0] = sieve[1] = false;\n    for (int i = 2; (long long)i * i <= N; i++)\n        if (sieve[i])\n            for (int j = i * i; j <= N; j += i) sieve[j] = false;\n    vector<int> primes;\n    for (int i = 0; i <= N; i++)\n        if (sieve[i]) primes.push_back(i);\n    cout << primes.size();\n    for (int p : primes) cout << ' ' << p;\n    cout << '\\n';\n    return 0;\n}\n",
+        "output": "2 17 97 1000000007 \n15 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47\n"
+      },
+      {
+        "title": "음수의 몫과 나머지",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // C++: / 는 0 쪽으로 자르고, % 의 부호는 나뉘는 수를 따라가요\n    int cases[4][2] = {{7, 2}, {-7, 2}, {7, -2}, {-7, -2}};\n    for (auto &c : cases) {\n        int a = c[0], b = c[1];\n        cout << a << ' ' << b << ' ' << a / b << ' ' << a % b << '\\n';\n    }\n\n    int MOD = 5;\n    int x = -12;\n    cout << \"나머지 \" << ((x % MOD) + MOD) % MOD << '\\n';  // 0..MOD-1 로 맞추기\n    // 내림 몫이 필요하면 직접 고쳐요\n    int a = -7, b = 2;\n    int q = a / b;\n    if ((a % b != 0) && ((a < 0) != (b < 0))) q--;\n    cout << \"내림 몫 \" << q << '\\n';\n    return 0;\n}\n",
+        "output": "7 2 3 1\n-7 2 -3 -1\n7 -2 -3 1\n-7 -2 3 -1\n나머지 3\n내림 몫 -4\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "int a = 1e9, b = 1e9;\nint r = a * b % MOD;",
+        "right": "long long r = 1LL * a * b % MOD;",
+        "why": "int 끼리 곱하면 int 로 계산돼 넘쳐요(정의되지 않은 동작). 한쪽을 long long 으로 바꾼 뒤 곱해요."
+      },
+      {
+        "wrong": "int r = x % MOD;  // x 가 음수일 수 있음",
+        "right": "int r = ((x % MOD) + MOD) % MOD;",
+        "why": "C++ 의 % 는 나뉘는 수의 부호를 따라가서 -12 % 5 == -2 예요. Python 은 3 이에요."
+      },
+      {
+        "wrong": "long long v = pow(3, 37);",
+        "right": "long long v = 1;\nfor (int i = 0; i < 37; i++) v *= 3;  // 나머지가 필요하면 power(3, 37, MOD)",
+        "why": "<cmath> 의 pow 는 double 로 계산해 2^53 보다 큰 값에서 오차가 나요. 3^37 = 450283905890997363 이 450283905890997376 으로 나와요."
+      },
+      {
+        "wrong": "for (int i = 2; i * i <= n; i++)  // n 이 int 최댓값 근처",
+        "right": "for (long long i = 2; i * i <= n; i++)",
+        "why": "n 이 2147483647 처럼 크면 i * i 가 int 를 넘어서 정의되지 않은 동작이 돼요."
+      },
+      {
+        "wrong": "long long l = a * b / gcd(a, b);",
+        "right": "long long l = a / gcd(a, b) * b;",
+        "why": "a * b 가 먼저 계산돼 넘칠 수 있어요. 먼저 나누면 중간 값이 답보다 커지지 않아요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "소수인지 볼 수가 몇 개뿐일 때(값이 커도 약 10^12 이하)",
+      "use": "√N 까지 나눠 보기"
+    },
+    {
+      "situation": "범위 안의 소수가 많이 필요할 때(N 이 약 10^7 이하)",
+      "use": "에라토스테네스의 체"
+    },
+    {
+      "situation": "a^b 를 어떤 수로 나눈 나머지가 필요할 때",
+      "use": "빠른 거듭제곱(Python 은 pow(a, b, m))"
+    },
+    {
+      "situation": "나머지 연산 안에서 나눠야 하고 MOD 가 소수일 때",
+      "use": "역원: a^(MOD-2) (Python 3.8+ 은 pow(a, -1, MOD))"
+    },
+    {
+      "situation": "최소공배수가 필요할 때",
+      "use": "a // gcd(a, b) * b (먼저 나누기)"
+    },
+    {
+      "situation": "음수를 나누거나 나머지를 구할 때",
+      "use": "Python 은 내림, C++ 은 0 쪽 자르기임을 기억하고 맞춰 고치기"
+    }
+  ],
+  "checklist": [
+    "곱셈 결과가 int 를 넘나요? C++ 은 1LL * a * b 로 곱해요.",
+    "곱하거나 더할 때마다 % MOD 를 했나요? 빼기 뒤에는 + MOD 를 했나요?",
+    "음수 나머지·몫이 나올 수 있나요? 언어별 규칙을 확인했나요?",
+    "0 과 1 을 소수로 판정하지 않나요?",
+    "실수 나눗셈(/, pow, sqrt)으로 큰 정수를 다루고 있지 않나요?",
+    "체의 크기 N + 1 이 메모리 안에 드나요?"
+  ]
+}

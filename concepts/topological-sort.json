@@ -1,0 +1,203 @@
+{
+  "slug": "topological-sort",
+  "title": "위상 정렬",
+  "category": "그래프",
+  "order": 5,
+  "summary": "선후 관계가 있는 일을 순서대로 줄 세워요. 진입 차수와 큐로 풀고 사이클도 함께 찾아요.",
+  "when": [
+    "선수 과목, 작업 순서처럼 'A 를 B 보다 먼저' 관계가 주어질 때",
+    "방향 그래프에 사이클이 있는지 확인할 때",
+    "사이클 없는 방향 그래프(DAG)에서 앞선 일들의 결과를 모아 DP 를 할 때",
+    "가능한 순서 중 번호가 사전순으로 가장 앞서는 순서가 필요할 때"
+  ],
+  "topics": [
+    "위상 정렬"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "진입 차수",
+        "signature": "indeg[b] += 1  # 간선 a -> b",
+        "does": "각 정점으로 들어오는 간선 수를 세요. 0이면 먼저 할 일이 남지 않은 정점이에요.",
+        "when": "간선을 읽으면서 같이 세요.",
+        "complexity": "O(E)"
+      },
+      {
+        "name": "칸(Kahn) 알고리즘",
+        "signature": "q = deque(v for v in range(1, n + 1) if indeg[v] == 0)\nwhile q:\n    u = q.popleft(); order.append(u)\n    for v in graph[u]:\n        indeg[v] -= 1\n        if indeg[v] == 0: q.append(v)",
+        "does": "진입 차수가 0인 정점을 꺼내 순서에 넣고, 나가는 간선을 지우며 새로 0이 된 정점을 큐에 넣어요.",
+        "when": "순서가 여러 개여도 아무거나 되는 경우 기본으로 써요.",
+        "complexity": "O(V + E)"
+      },
+      {
+        "name": "사이클 판정",
+        "signature": "len(order) < n",
+        "does": "사이클에 걸린 정점은 진입 차수가 0이 되지 않아 순서에 들어가지 못해요.",
+        "when": "칸 알고리즘이 끝난 뒤 순서 길이로 확인해요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "사전순 위상 정렬",
+        "signature": "heapq.heapify(pq)\nu = heapq.heappop(pq)",
+        "does": "큐 대신 최소 힙을 써서 지금 고를 수 있는 정점 중 번호가 가장 작은 것을 먼저 꺼내요.",
+        "when": "'가능한 답이 여러 개면 번호가 작은 것부터' 같은 조건이 있을 때 써요.",
+        "complexity": "O((V + E) log V)"
+      },
+      {
+        "name": "DAG 위의 DP",
+        "signature": "finish[v] = max(finish[v], finish[u] + cost[v])",
+        "does": "위상 순서대로 처리하면 v 를 볼 때 앞선 정점의 값이 모두 정해져 있어요.",
+        "when": "가장 늦게 끝나는 시각, 경로 수, 가장 긴 경로를 구할 때 써요.",
+        "complexity": "O(V + E)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "칸 알고리즘: 순서 구하기와 사이클 판정",
+        "code": "import sys\nfrom collections import deque\n\ninput = sys.stdin.readline\n\nn, m = map(int, input().split())\ngraph = [[] for _ in range(n + 1)]\nindeg = [0] * (n + 1)\nfor _ in range(m):\n    a, b = map(int, input().split())     # a 를 b 보다 먼저\n    graph[a].append(b)\n    indeg[b] += 1\n\nq = deque(v for v in range(1, n + 1) if indeg[v] == 0)   # 시작점은 여러 개일 수 있어요\norder = []\nwhile q:\n    u = q.popleft()\n    order.append(u)\n    for v in graph[u]:\n        indeg[v] -= 1\n        if indeg[v] == 0:\n            q.append(v)\n\nif len(order) < n:\n    print('사이클이 있어서 순서를 정할 수 없음')\nelse:\n    print(*order)\n",
+        "stdin": "6 6\n5 1\n5 3\n1 2\n3 2\n2 4\n6 4\n",
+        "output": "5 6 1 3 2 4\n"
+      },
+      {
+        "title": "최소 힙: 번호가 작은 정점부터 고르기",
+        "code": "import heapq\n\nn = 6\nedges = [(5, 1), (5, 3), (1, 2), (3, 2), (2, 4), (6, 4)]\ngraph = [[] for _ in range(n + 1)]\nindeg = [0] * (n + 1)\nfor a, b in edges:\n    graph[a].append(b)\n    indeg[b] += 1\n\npq = [v for v in range(1, n + 1) if indeg[v] == 0]\nheapq.heapify(pq)                        # heapify 는 제자리에서 바꾸고 None 을 돌려줘요\norder = []\nwhile pq:\n    u = heapq.heappop(pq)                # 지금 고를 수 있는 것 중 번호가 가장 작은 정점\n    order.append(u)\n    for v in graph[u]:\n        indeg[v] -= 1\n        if indeg[v] == 0:\n            heapq.heappush(pq, v)\nprint(*order)\n",
+        "output": "5 1 3 2 6 4\n"
+      },
+      {
+        "title": "위상 순서로 DP: 작업이 끝나는 가장 이른 시각",
+        "code": "from collections import deque\n\nn = 5\ncost = [0, 3, 2, 4, 1, 5]                # 각 작업에 걸리는 시간 (1번부터)\nedges = [(1, 3), (2, 3), (3, 5), (2, 4), (4, 5)]\ngraph = [[] for _ in range(n + 1)]\nindeg = [0] * (n + 1)\nfor a, b in edges:\n    graph[a].append(b)\n    indeg[b] += 1\n\nfinish = [0] * (n + 1)                   # finish[v]: v 가 끝나는 가장 이른 시각\nq = deque()\nfor v in range(1, n + 1):\n    if indeg[v] == 0:\n        finish[v] = cost[v]\n        q.append(v)\nwhile q:\n    u = q.popleft()\n    for v in graph[u]:\n        finish[v] = max(finish[v], finish[u] + cost[v])   # 앞선 작업이 모두 끝나야 시작\n        indeg[v] -= 1\n        if indeg[v] == 0:\n            q.append(v)\nprint(*finish[1:])\nprint('전체', max(finish))\n",
+        "output": "3 2 7 3 12\n전체 12\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "q = deque([1])",
+        "right": "q = deque(v for v in range(1, n + 1) if indeg[v] == 0)",
+        "why": "진입 차수가 0인 정점은 여러 개일 수 있어요. 처음에 모두 넣어야 빠지는 정점이 없어요."
+      },
+      {
+        "wrong": "print(*order)",
+        "right": "if len(order) < n:\n    print(-1)\nelse:\n    print(*order)",
+        "why": "사이클이 있으면 일부 정점만 순서에 들어가요. 확인하지 않으면 불완전한 순서를 답으로 내요."
+      },
+      {
+        "wrong": "q = deque(...)  # 사전순 답이 필요한데 큐 사용",
+        "right": "pq = [...]\nheapq.heapify(pq)\nu = heapq.heappop(pq)",
+        "why": "큐는 들어온 순서대로 꺼내서 번호가 작은 정점이 먼저 나온다는 보장이 없어요. 위 예제 그래프에서 큐는 5 6 1 3 2 4, 힙은 5 1 3 2 6 4 를 내요."
+      },
+      {
+        "wrong": "pq = heapq.heapify(nums)",
+        "right": "pq = nums\nheapq.heapify(pq)",
+        "why": "heapify 는 리스트를 제자리에서 바꾸고 None 을 돌려줘요. 반환값을 받으면 pq 가 None 이 돼요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "진입 차수",
+        "signature": "indeg[b]++;  // 간선 a -> b",
+        "does": "각 정점으로 들어오는 간선 수를 세요. 0이면 먼저 할 일이 남지 않은 정점이에요.",
+        "when": "간선을 읽으면서 같이 세요.",
+        "complexity": "O(E)"
+      },
+      {
+        "name": "칸(Kahn) 알고리즘",
+        "signature": "queue<int> q;\nfor (int v = 1; v <= n; v++) if (indeg[v] == 0) q.push(v);\nwhile (!q.empty()) { ... if (--indeg[v] == 0) q.push(v); }",
+        "does": "진입 차수가 0인 정점을 꺼내 순서에 넣고, 나가는 간선을 지우며 새로 0이 된 정점을 넣어요.",
+        "when": "순서가 여러 개여도 아무거나 되는 경우 기본으로 써요.",
+        "complexity": "O(V + E)"
+      },
+      {
+        "name": "사이클 판정",
+        "signature": "(int)order.size() < n",
+        "does": "사이클에 걸린 정점은 진입 차수가 0이 되지 않아 순서에 들어가지 못해요.",
+        "when": "칸 알고리즘이 끝난 뒤 순서 길이로 확인해요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "사전순 위상 정렬",
+        "signature": "priority_queue<int, vector<int>, greater<int>> pq;",
+        "does": "큐 대신 최소 힙을 써서 번호가 가장 작은 정점부터 꺼내요.",
+        "when": "'가능한 답이 여러 개면 번호가 작은 것부터' 같은 조건이 있을 때 써요.",
+        "complexity": "O((V + E) log V)"
+      },
+      {
+        "name": "DAG 위의 DP",
+        "signature": "finish[v] = max(finish[v], finish[u] + cost[v]);",
+        "does": "위상 순서대로 처리하면 v 를 볼 때 앞선 정점의 값이 모두 정해져 있어요.",
+        "when": "가장 늦게 끝나는 시각, 경로 수, 가장 긴 경로를 구할 때 써요.",
+        "complexity": "O(V + E)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "칸 알고리즘: 순서 구하기와 사이클 판정",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n, m;\n    cin >> n >> m;\n    vector<vector<int>> graph(n + 1);\n    vector<int> indeg(n + 1, 0);\n    for (int i = 0; i < m; i++) {\n        int a, b;\n        cin >> a >> b;                   // a 를 b 보다 먼저\n        graph[a].push_back(b);\n        indeg[b]++;\n    }\n\n    queue<int> q;\n    for (int v = 1; v <= n; v++)\n        if (indeg[v] == 0) q.push(v);    // 시작점은 여러 개일 수 있어요\n    vector<int> order;\n    while (!q.empty()) {\n        int u = q.front();\n        q.pop();\n        order.push_back(u);\n        for (int v : graph[u])\n            if (--indeg[v] == 0) q.push(v);\n    }\n\n    if ((int)order.size() < n) {\n        cout << \"사이클이 있어서 순서를 정할 수 없음\\n\";\n    } else {\n        for (int i = 0; i < n; i++) cout << order[i] << (i + 1 == n ? '\\n' : ' ');\n    }\n    return 0;\n}\n",
+        "stdin": "6 6\n5 1\n5 3\n1 2\n3 2\n2 4\n6 4\n",
+        "output": "5 6 1 3 2 4\n"
+      },
+      {
+        "title": "최소 힙: 번호가 작은 정점부터 고르기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n = 6;\n    vector<pair<int, int>> edges = {{5, 1}, {5, 3}, {1, 2}, {3, 2}, {2, 4}, {6, 4}};\n    vector<vector<int>> graph(n + 1);\n    vector<int> indeg(n + 1, 0);\n    for (auto [a, b] : edges) {\n        graph[a].push_back(b);\n        indeg[b]++;\n    }\n\n    // greater<int>: 번호가 가장 작은 정점부터 (기본 priority_queue 는 가장 큰 것부터)\n    priority_queue<int, vector<int>, greater<int>> pq;\n    for (int v = 1; v <= n; v++)\n        if (indeg[v] == 0) pq.push(v);\n    vector<int> order;\n    while (!pq.empty()) {\n        int u = pq.top();\n        pq.pop();\n        order.push_back(u);\n        for (int v : graph[u])\n            if (--indeg[v] == 0) pq.push(v);\n    }\n    for (int i = 0; i < n; i++) cout << order[i] << (i + 1 == n ? '\\n' : ' ');\n    return 0;\n}\n",
+        "output": "5 1 3 2 6 4\n"
+      },
+      {
+        "title": "위상 순서로 DP: 작업이 끝나는 가장 이른 시각",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n = 5;\n    vector<int> cost = {0, 3, 2, 4, 1, 5};       // 각 작업에 걸리는 시간 (1번부터)\n    vector<pair<int, int>> edges = {{1, 3}, {2, 3}, {3, 5}, {2, 4}, {4, 5}};\n    vector<vector<int>> graph(n + 1);\n    vector<int> indeg(n + 1, 0);\n    for (auto [a, b] : edges) {\n        graph[a].push_back(b);\n        indeg[b]++;\n    }\n\n    vector<long long> finish(n + 1, 0);          // finish[v]: v 가 끝나는 가장 이른 시각\n    queue<int> q;\n    for (int v = 1; v <= n; v++)\n        if (indeg[v] == 0) {\n            finish[v] = cost[v];\n            q.push(v);\n        }\n    while (!q.empty()) {\n        int u = q.front();\n        q.pop();\n        for (int v : graph[u]) {\n            finish[v] = max(finish[v], finish[u] + cost[v]);   // 앞선 작업이 모두 끝나야 시작\n            if (--indeg[v] == 0) q.push(v);\n        }\n    }\n    for (int v = 1; v <= n; v++) cout << finish[v] << (v == n ? '\\n' : ' ');\n    cout << \"전체 \" << *max_element(finish.begin(), finish.end()) << '\\n';\n    return 0;\n}\n",
+        "output": "3 2 7 3 12\n전체 12\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "priority_queue<int> pq;  // 사전순 답이 필요할 때",
+        "right": "priority_queue<int, vector<int>, greater<int>> pq;",
+        "why": "priority_queue 는 기본이 최대 힙이라 번호가 큰 정점부터 꺼내요(Python heapq 와 반대)."
+      },
+      {
+        "wrong": "q.push(1);",
+        "right": "for (int v = 1; v <= n; v++) if (indeg[v] == 0) q.push(v);",
+        "why": "진입 차수가 0인 정점은 여러 개일 수 있어요. 처음에 모두 넣어야 해요."
+      },
+      {
+        "wrong": "// order 를 바로 출력",
+        "right": "if ((int)order.size() < n) { cout << -1; return 0; }",
+        "why": "사이클이 있으면 일부 정점만 순서에 들어가요. 길이를 확인해야 해요."
+      },
+      {
+        "wrong": "vector<int> indeg(n);  // 정점 번호 1..n",
+        "right": "vector<int> indeg(n + 1);",
+        "why": "indeg[n] 은 범위 밖이에요. 범위 밖 접근은 정의되지 않은 동작이라 바로 죽지 않고 엉뚱한 값을 낼 수도 있어요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "순서가 여러 개면 아무거나 출력해도 될 때",
+      "use": "큐로 칸 알고리즘"
+    },
+    {
+      "situation": "가능한 순서 중 사전순으로 가장 앞선 것이 필요할 때",
+      "use": "최소 힙으로 칸 알고리즘"
+    },
+    {
+      "situation": "방향 그래프의 사이클 여부만 알면 될 때",
+      "use": "칸 알고리즘 후 순서 길이 비교(또는 DFS 색칠)"
+    },
+    {
+      "situation": "앞선 일들의 결과를 모아 값을 정해야 할 때",
+      "use": "위상 순서대로 DP"
+    },
+    {
+      "situation": "무방향 그래프의 사이클을 찾을 때",
+      "use": "위상 정렬 대신 유니온 파인드나 DFS"
+    }
+  ],
+  "checklist": [
+    "간선 방향(누가 먼저인지)을 문제와 같게 넣었나요?",
+    "진입 차수가 0인 정점을 처음에 모두 넣었나요?",
+    "순서 길이가 n 보다 작으면(사이클) 문제가 원하는 값을 출력하나요?",
+    "사전순 조건이 있으면 최소 힙을 쓰나요? C++ 은 greater<int> 를 넣었나요?",
+    "같은 간선이 두 번 주어져도 진입 차수와 인접 리스트가 함께 늘어서 괜찮은지 확인했나요?"
+  ]
+}

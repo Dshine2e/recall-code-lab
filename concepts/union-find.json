@@ -1,0 +1,225 @@
+{
+  "slug": "union-find",
+  "title": "유니온 파인드",
+  "category": "그래프",
+  "order": 4,
+  "summary": "원소를 그룹으로 합치고 같은 그룹인지 거의 상수 시간에 확인해요. 크루스칼 MST의 핵심이에요.",
+  "when": [
+    "간선을 하나씩 더하면서 두 정점이 이어졌는지 계속 물을 때",
+    "그룹(연결 요소)의 개수나 크기를 합치면서 바로바로 알아야 할 때",
+    "무방향 그래프에 간선을 넣을 때 사이클이 생기는지 확인할 때",
+    "크루스칼 알고리즘으로 최소 신장 트리를 만들 때",
+    "친구의 친구처럼 같은 그룹으로 묶이는 관계를 처리할 때"
+  ],
+  "topics": [
+    "유니온 파인드",
+    "크루스칼"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "parent 초기화",
+        "signature": "parent = list(range(n + 1))",
+        "does": "처음에는 모든 원소가 자기 자신이 루트인 그룹 하나씩이에요.",
+        "when": "정점 번호가 1부터면 n + 1 칸으로 만들어요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "find (경로 압축)",
+        "signature": "def find(x):\n    while parent[x] != x:\n        parent[x] = parent[parent[x]]\n        x = parent[x]\n    return x",
+        "does": "x 가 속한 그룹의 루트를 돌려줘요. 지나가며 부모를 위로 당겨 다음 탐색을 빠르게 해요.",
+        "when": "두 원소가 같은 그룹인지 볼 때 find(a) == find(b) 로 비교해요. Python 은 재귀 대신 반복문이 안전해요.",
+        "complexity": "상각 O(α(N)) (크기 기준 합치기와 함께 쓸 때, 거의 상수)"
+      },
+      {
+        "name": "union (크기 기준)",
+        "signature": "def union(a, b):\n    ra, rb = find(a), find(b)\n    if ra == rb: return False\n    if size[ra] < size[rb]: ra, rb = rb, ra\n    parent[rb] = ra; size[ra] += size[rb]\n    return True",
+        "does": "두 그룹의 루트를 이어 하나로 합쳐요. 작은 그룹을 큰 그룹 밑에 붙여 트리를 낮게 유지해요.",
+        "when": "반환값으로 실제로 합쳐졌는지(사이클이 아닌지) 알 수 있어요.",
+        "complexity": "상각 O(α(N))"
+      },
+      {
+        "name": "그룹 크기",
+        "signature": "size[find(x)]",
+        "does": "루트에만 그룹 크기를 저장해 두고 루트를 통해 읽어요.",
+        "when": "합칠 때마다 가장 큰 그룹 크기 같은 값을 바로 알고 싶을 때 써요.",
+        "complexity": "상각 O(α(N))"
+      },
+      {
+        "name": "크루스칼",
+        "signature": "edges.sort(key=lambda e: e[2])\nfor u, v, w in edges:\n    if union(u, v): total += w",
+        "does": "가중치가 작은 간선부터 보며 사이클을 만들지 않는 간선만 골라 최소 신장 트리를 만들어요.",
+        "when": "모든 정점을 최소 비용으로 잇는 문제에서 써요. 고른 간선이 n-1개인지 확인해요.",
+        "complexity": "O(E log E)"
+      },
+      {
+        "name": "연결 요소 세기",
+        "signature": "len({find(v) for v in range(1, n + 1)})",
+        "does": "루트의 종류 수가 곧 그룹(연결 요소) 수예요.",
+        "when": "모든 합치기가 끝난 뒤 그룹 수를 셀 때 써요. 합칠 때마다 count -= 1 해도 돼요.",
+        "complexity": "O(N · α(N))"
+      }
+    ],
+    "examples": [
+      {
+        "title": "합치기(U)와 같은 그룹 질의(Q), 그룹 크기",
+        "code": "import sys\n\ninput = sys.stdin.readline\n\n\ndef find(x):\n    root = x\n    while parent[root] != root:          # 루트 찾기\n        root = parent[root]\n    while parent[x] != root:             # 경로 압축: 지나온 원소를 루트에 바로 붙이기\n        parent[x], x = root, parent[x]\n    return root\n\n\ndef union(a, b):\n    ra, rb = find(a), find(b)\n    if ra == rb:\n        return False                     # 이미 같은 그룹\n    if size[ra] < size[rb]:\n        ra, rb = rb, ra\n    parent[rb] = ra                      # 작은 그룹을 큰 그룹 밑으로\n    size[ra] += size[rb]\n    return True\n\n\nn, q = map(int, input().split())\nparent = list(range(n + 1))\nsize = [1] * (n + 1)\nfor _ in range(q):\n    op, a, b = input().split()\n    a, b = int(a), int(b)\n    if op == 'U':\n        union(a, b)\n    else:\n        same = find(a) == find(b)\n        print('YES' if same else 'NO', size[find(a)])\n",
+        "stdin": "6 7\nU 1 2\nU 3 4\nQ 1 3\nU 2 3\nQ 1 4\nQ 5 6\nQ 4 4\n",
+        "output": "NO 2\nYES 4\nNO 1\nYES 4\n"
+      },
+      {
+        "title": "크루스칼: 최소 신장 트리의 가중치 합",
+        "code": "def find(x):\n    while parent[x] != x:\n        parent[x] = parent[parent[x]]    # 경로 절반 압축\n        x = parent[x]\n    return x\n\n\nn = 5\nedges = [(1, 2, 3), (1, 3, 1), (2, 3, 7), (2, 4, 5), (3, 4, 2), (4, 5, 4), (3, 5, 6)]\nedges.sort(key=lambda e: e[2])           # 가중치 오름차순\n\nparent = list(range(n + 1))\ntotal = 0\nused = []\nfor u, v, w in edges:\n    ru, rv = find(u), find(v)\n    if ru != rv:                         # 사이클이 생기지 않을 때만 고르기\n        parent[ru] = rv\n        total += w\n        used.append((u, v, w))\n\nif len(used) == n - 1:\n    print(total)\n    for u, v, w in used:\n        print(u, v, w)\nelse:\n    print('연결되지 않음')\n",
+        "output": "10\n1 3 1\n3 4 2\n1 2 3\n4 5 4\n"
+      },
+      {
+        "title": "연결 요소 개수와 사이클 판정",
+        "code": "def find(x):\n    while parent[x] != x:\n        parent[x] = parent[parent[x]]\n        x = parent[x]\n    return x\n\n\nn = 7\nedges = [(1, 2), (2, 3), (4, 5), (5, 4), (3, 1)]\nparent = list(range(n + 1))\ncycle = False\nfor a, b in edges:\n    ra, rb = find(a), find(b)\n    if ra == rb:\n        cycle = True                     # 이미 연결된 두 정점을 또 이으면 사이클\n    else:\n        parent[ra] = rb\n\nroots = {find(v) for v in range(1, n + 1)}\nprint('연결 요소', len(roots))\nprint('사이클', '있음' if cycle else '없음')\n",
+        "output": "연결 요소 4\n사이클 있음\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "parent[a] = b",
+        "right": "parent[find(a)] = find(b)",
+        "why": "루트가 아닌 a 의 부모만 바꾸면 a 만 옮겨지고 원래 a 그룹의 다른 원소는 따라오지 않아요."
+      },
+      {
+        "wrong": "if parent[a] == parent[b]:",
+        "right": "if find(a) == find(b):",
+        "why": "parent 는 바로 위 부모일 뿐 루트가 아닐 수 있어요. 같은 그룹이어도 parent 값이 다를 수 있어요."
+      },
+      {
+        "wrong": "ra, rb = find(a), find(b)\nparent[rb] = ra\nsize[ra] += size[rb]",
+        "right": "ra, rb = find(a), find(b)\nif ra == rb:\n    return False\nparent[rb] = ra\nsize[ra] += size[rb]",
+        "why": "이미 같은 그룹인데 합치면 size 가 자기 자신만큼 또 더해져 두 배가 돼요."
+      },
+      {
+        "wrong": "def find(x):\n    if parent[x] != x:\n        parent[x] = find(parent[x])\n    return parent[x]",
+        "right": "def find(x):\n    while parent[x] != x:\n        parent[x] = parent[parent[x]]\n        x = parent[x]\n    return x",
+        "why": "크기를 보지 않고 합치면 union(1, 2), union(2, 3), … 순서에서 트리가 한 줄로 길어져요. 깊이가 약 1000을 넘으면 재귀 find 가 RecursionError 를 내요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "parent 초기화",
+        "signature": "vector<int> parent(n + 1);\niota(parent.begin(), parent.end(), 0);",
+        "does": "parent[i] = i 로 채워 모든 원소를 각자 그룹으로 시작해요. iota 는 <numeric> 에 있어요.",
+        "when": "정점 번호가 1부터면 n + 1 칸으로 만들어요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "find (경로 압축)",
+        "signature": "int find(int x) {\n    while (parent[x] != x) {\n        parent[x] = parent[parent[x]];\n        x = parent[x];\n    }\n    return x;\n}",
+        "does": "x 가 속한 그룹의 루트를 돌려주고, 지나가며 부모를 위로 당겨요.",
+        "when": "같은 그룹인지 볼 때 find(a) == find(b) 로 비교해요.",
+        "complexity": "상각 O(α(N)) (크기 기준 합치기와 함께 쓸 때, 거의 상수)"
+      },
+      {
+        "name": "unite (크기 기준)",
+        "signature": "bool unite(int a, int b) {\n    a = find(a); b = find(b);\n    if (a == b) return false;\n    if (sz[a] < sz[b]) swap(a, b);\n    parent[b] = a; sz[a] += sz[b];\n    return true;\n}",
+        "does": "두 그룹을 합치고, 실제로 합쳐졌으면 true 를 돌려줘요. union 은 예약어라 다른 이름을 써요.",
+        "when": "간선을 넣으며 사이클 여부(false)를 확인할 때도 써요.",
+        "complexity": "상각 O(α(N))"
+      },
+      {
+        "name": "그룹 크기",
+        "signature": "sz[find(x)]",
+        "does": "루트에만 그룹 크기를 저장해 두고 루트를 통해 읽어요.",
+        "when": "합칠 때마다 그룹 크기를 바로 알아야 할 때 써요.",
+        "complexity": "상각 O(α(N))"
+      },
+      {
+        "name": "크루스칼",
+        "signature": "sort(edges.begin(), edges.end());  // {w, u, v}\nfor (auto [w, u, v] : edges) if (unite(u, v)) total += w;",
+        "does": "가중치가 작은 간선부터 보며 사이클을 만들지 않는 간선만 골라 최소 신장 트리를 만들어요.",
+        "when": "모든 정점을 최소 비용으로 잇는 문제에서 써요. 합은 long long 으로 둬요.",
+        "complexity": "O(E log E)"
+      },
+      {
+        "name": "연결 요소 세기",
+        "signature": "for (int v = 1; v <= n; v++) if (find(v) == v) cnt++;",
+        "does": "자기 자신이 루트인 원소의 수가 그룹 수예요.",
+        "when": "모든 합치기가 끝난 뒤 그룹 수를 셀 때 써요.",
+        "complexity": "O(N · α(N))"
+      }
+    ],
+    "examples": [
+      {
+        "title": "합치기(U)와 같은 그룹 질의(Q), 그룹 크기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nvector<int> parent, sz;\n\nint find(int x) {\n    int root = x;\n    while (parent[root] != root) root = parent[root];   // 루트 찾기\n    while (parent[x] != root) {                         // 경로 압축\n        int next = parent[x];\n        parent[x] = root;\n        x = next;\n    }\n    return root;\n}\n\nbool unite(int a, int b) {             // union 은 C++ 예약어라 이름으로 못 써요\n    a = find(a);\n    b = find(b);\n    if (a == b) return false;          // 이미 같은 그룹\n    if (sz[a] < sz[b]) swap(a, b);\n    parent[b] = a;                     // 작은 그룹을 큰 그룹 밑으로\n    sz[a] += sz[b];\n    return true;\n}\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n    int n, q;\n    cin >> n >> q;\n    parent.resize(n + 1);\n    iota(parent.begin(), parent.end(), 0);\n    sz.assign(n + 1, 1);\n    while (q--) {\n        char op;\n        int a, b;\n        cin >> op >> a >> b;\n        if (op == 'U') unite(a, b);\n        else cout << (find(a) == find(b) ? \"YES\" : \"NO\") << ' ' << sz[find(a)] << '\\n';\n    }\n    return 0;\n}\n",
+        "stdin": "6 7\nU 1 2\nU 3 4\nQ 1 3\nU 2 3\nQ 1 4\nQ 5 6\nQ 4 4\n",
+        "output": "NO 2\nYES 4\nNO 1\nYES 4\n"
+      },
+      {
+        "title": "크루스칼: 최소 신장 트리의 가중치 합",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nvector<int> parent;\n\nint find(int x) {\n    while (parent[x] != x) {\n        parent[x] = parent[parent[x]];   // 경로 절반 압축\n        x = parent[x];\n    }\n    return x;\n}\n\nint main() {\n    int n = 5;\n    // {가중치, u, v} 로 두면 기본 sort 가 가중치 순으로 정렬해요\n    vector<array<int, 3>> edges = {{3, 1, 2}, {1, 1, 3}, {7, 2, 3}, {5, 2, 4}, {2, 3, 4}, {4, 4, 5}, {6, 3, 5}};\n    sort(edges.begin(), edges.end());\n\n    parent.resize(n + 1);\n    iota(parent.begin(), parent.end(), 0);\n    long long total = 0;                 // 가중치 합은 long long\n    vector<array<int, 3>> used;\n    for (auto [w, u, v] : edges) {\n        int ru = find(u), rv = find(v);\n        if (ru != rv) {                  // 사이클이 생기지 않을 때만 고르기\n            parent[ru] = rv;\n            total += w;\n            used.push_back({u, v, w});\n        }\n    }\n\n    if ((int)used.size() == n - 1) {\n        cout << total << '\\n';\n        for (auto [u, v, w] : used) cout << u << ' ' << v << ' ' << w << '\\n';\n    } else {\n        cout << \"연결되지 않음\\n\";\n    }\n    return 0;\n}\n",
+        "output": "10\n1 3 1\n3 4 2\n1 2 3\n4 5 4\n"
+      },
+      {
+        "title": "연결 요소 개수와 사이클 판정",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nvector<int> parent;\n\nint find(int x) {\n    while (parent[x] != x) {\n        parent[x] = parent[parent[x]];\n        x = parent[x];\n    }\n    return x;\n}\n\nint main() {\n    int n = 7;\n    vector<pair<int, int>> edges = {{1, 2}, {2, 3}, {4, 5}, {5, 4}, {3, 1}};\n    parent.resize(n + 1);\n    iota(parent.begin(), parent.end(), 0);\n    bool cycle = false;\n    for (auto [a, b] : edges) {\n        int ra = find(a), rb = find(b);\n        if (ra == rb) cycle = true;      // 이미 연결된 두 정점을 또 이으면 사이클\n        else parent[ra] = rb;\n    }\n\n    int components = 0;\n    for (int v = 1; v <= n; v++)\n        if (find(v) == v) components++;  // 루트의 개수 = 연결 요소 수\n    cout << \"연결 요소 \" << components << '\\n';\n    cout << \"사이클 \" << (cycle ? \"있음\" : \"없음\") << '\\n';\n    return 0;\n}\n",
+        "output": "연결 요소 4\n사이클 있음\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "bool union(int a, int b) { ... }",
+        "right": "bool unite(int a, int b) { ... }",
+        "why": "union 은 C++ 예약어(공용체)라서 함수 이름으로 쓰면 컴파일 오류가 나요."
+      },
+      {
+        "wrong": "parent[a] = b;",
+        "right": "parent[find(a)] = find(b);",
+        "why": "루트가 아닌 a 의 부모만 바꾸면 원래 a 그룹의 다른 원소는 따라오지 않아요."
+      },
+      {
+        "wrong": "if (parent[a] == parent[b])",
+        "right": "if (find(a) == find(b))",
+        "why": "parent 는 바로 위 부모일 뿐 루트가 아닐 수 있어요."
+      },
+      {
+        "wrong": "a = find(a); b = find(b);\nparent[b] = a; sz[a] += sz[b];",
+        "right": "a = find(a); b = find(b);\nif (a == b) return false;\nparent[b] = a; sz[a] += sz[b];",
+        "why": "이미 같은 그룹인데 합치면 크기가 두 배로 잘못 더해져요."
+      },
+      {
+        "wrong": "int total = 0;  // 간선 2e5개, 가중치 최대 1e9",
+        "right": "long long total = 0;",
+        "why": "최소 신장 트리의 가중치 합은 int(약 2.1e9)를 쉽게 넘어요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "간선이 추가만 되고, 두 정점이 이어졌는지 여러 번 물을 때",
+      "use": "유니온 파인드"
+    },
+    {
+      "situation": "그래프가 한 번에 주어지고 연결 요소만 세면 될 때",
+      "use": "BFS/DFS 도 충분해요"
+    },
+    {
+      "situation": "최소 비용으로 모든 정점을 이어야 할 때",
+      "use": "크루스칼(간선 정렬 + 유니온 파인드)"
+    },
+    {
+      "situation": "두 정점 사이의 경로나 거리가 필요할 때",
+      "use": "BFS/DFS·최단 경로(유니온 파인드는 연결 여부만 알아요)"
+    },
+    {
+      "situation": "간선이 지워지기도 할 때",
+      "use": "유니온 파인드는 나누기를 못 해요. 질의를 거꾸로 처리해 추가만 남기는 방법을 생각해요"
+    }
+  ],
+  "checklist": [
+    "정점 번호가 1부터면 parent 를 n + 1 칸으로 만들었나요?",
+    "같은 그룹 판정을 find(a) == find(b) 로 하나요?",
+    "합치기 전에 두 루트가 같은지 확인하나요?",
+    "경로 압축과 크기 기준 합치기를 함께 썼나요?",
+    "Python 에서 재귀 find 대신 반복문을 썼나요?",
+    "크루스칼에서 고른 간선이 n-1개인지(전부 연결됐는지) 확인했나요?"
+  ]
+}

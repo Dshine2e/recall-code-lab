@@ -1,0 +1,229 @@
+{
+  "slug": "shortest-path",
+  "title": "최단 경로",
+  "category": "그래프",
+  "order": 3,
+  "summary": "가중치가 있는 그래프의 최단 거리를 다익스트라·0-1 BFS·플로이드·벨만-포드 중 골라 구해요.",
+  "when": [
+    "간선마다 비용(시간, 거리)이 다르고 한 출발점에서 최단 거리를 구할 때",
+    "가중치가 0과 1뿐이라 덱 하나로 빠르게 풀 수 있을 때(0-1 BFS)",
+    "정점이 수백 개 이하이고 모든 정점 쌍의 거리가 필요할 때(플로이드-워셜)",
+    "음수 가중치가 있거나 음수 사이클이 있는지 확인해야 할 때(벨만-포드)",
+    "(정점, 남은 횟수)처럼 상태를 늘린 그래프에서 최소 비용을 구할 때"
+  ],
+  "topics": [
+    "다익스트라"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "heapq.heappush / heappop",
+        "signature": "heapq.heappush(pq, (d, v)) / d, v = heapq.heappop(pq)",
+        "does": "(거리, 정점) 튜플을 넣고, 거리가 가장 작은 것을 꺼내요. heapq 는 최소 힙이에요.",
+        "when": "다익스트라에서 다음에 확정할 정점을 고를 때 써요.",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "다익스트라",
+        "signature": "dist = [INF] * (n + 1); dist[s] = 0; pq = [(0, s)]",
+        "does": "가장 가까운 정점부터 꺼내 이웃 거리를 줄여요(완화). 꺼낸 거리가 dist 보다 크면 건너뛰어요.",
+        "when": "가중치가 모두 0 이상이고 한 출발점에서의 거리가 필요할 때 써요.",
+        "complexity": "O((V + E) log V)"
+      },
+      {
+        "name": "0-1 BFS",
+        "signature": "dq.appendleft(v)  # 가중치 0\ndq.append(v)  # 가중치 1",
+        "does": "collections.deque 로 비용 0 간선은 앞에, 비용 1 간선은 뒤에 넣어요.",
+        "when": "가중치가 0과 1 두 가지뿐일 때 힙 없이 써요.",
+        "complexity": "O(V + E)"
+      },
+      {
+        "name": "플로이드-워셜",
+        "signature": "for k in range(n):\n    for i in range(n):\n        for j in range(n):\n            d[i][j] = min(d[i][j], d[i][k] + d[k][j])",
+        "does": "거쳐 가는 정점 k 를 하나씩 늘리며 모든 쌍의 거리를 갱신해요.",
+        "when": "정점이 약 400개 이하이고 모든 쌍의 거리가 필요할 때 써요. Python 은 3중 반복이 느려서 V 가 작을 때만 써요.",
+        "complexity": "O(V^3)"
+      },
+      {
+        "name": "벨만-포드",
+        "signature": "for _ in range(n - 1):\n    for u, v, w in edges:\n        if dist[u] != INF and dist[u] + w < dist[v]:\n            dist[v] = dist[u] + w",
+        "does": "모든 간선을 V-1번 완화해요. V번째에도 줄어드는 거리가 있으면 음수 사이클이 있어요.",
+        "when": "음수 간선이 있거나 음수 사이클을 찾아야 할 때 써요.",
+        "complexity": "O(V · E)"
+      },
+      {
+        "name": "INF 표시",
+        "signature": "INF = float('inf')  # 또는 INF = 10 ** 18",
+        "does": "아직 도달하지 못한 거리를 나타내요. float('inf') 는 어떤 정수보다 커요.",
+        "when": "출력하기 전에 INF 인지 확인해서 -1 같은 문제의 표기로 바꿔요.",
+        "complexity": "O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "다익스트라: 1번에서 모든 정점까지(도달 못하면 -1)",
+        "code": "import sys\nimport heapq\n\n\ndef main():\n    data = sys.stdin.read().split()\n    n, m, s = int(data[0]), int(data[1]), int(data[2])\n    graph = [[] for _ in range(n + 1)]\n    idx = 3\n    for _ in range(m):\n        u, v, w = int(data[idx]), int(data[idx + 1]), int(data[idx + 2])\n        idx += 3\n        graph[u].append((v, w))          # 방향 간선 u -> v (가중치 w)\n\n    INF = float('inf')\n    dist = [INF] * (n + 1)\n    dist[s] = 0\n    pq = [(0, s)]                        # (거리, 정점): 거리가 앞에 와야 해요\n    while pq:\n        d, u = heapq.heappop(pq)\n        if d > dist[u]:                  # 이미 더 짧은 거리로 처리한 정점\n            continue\n        for v, w in graph[u]:\n            nd = d + w\n            if nd < dist[v]:\n                dist[v] = nd\n                heapq.heappush(pq, (nd, v))\n\n    for v in range(1, n + 1):\n        print(dist[v] if dist[v] != INF else -1)\n\n\nmain()\n",
+        "stdin": "5 6 1\n1 2 4\n1 3 1\n3 2 2\n2 4 5\n3 4 8\n4 1 3\n",
+        "output": "0\n3\n1\n8\n-1\n"
+      },
+      {
+        "title": "0-1 BFS: 가중치가 0과 1뿐인 그래프",
+        "code": "from collections import deque\n\nn = 5\nedges = [(1, 2, 0), (1, 3, 1), (2, 3, 1), (2, 4, 1), (3, 5, 0), (4, 5, 0)]\ngraph = [[] for _ in range(n + 1)]\nfor u, v, w in edges:                    # 양방향 간선, 가중치는 0 또는 1\n    graph[u].append((v, w))\n    graph[v].append((u, w))\n\nINF = float('inf')\ndist = [INF] * (n + 1)\ndist[1] = 0\ndq = deque([1])\nwhile dq:\n    u = dq.popleft()\n    for v, w in graph[u]:\n        if dist[u] + w < dist[v]:\n            dist[v] = dist[u] + w\n            if w == 0:\n                dq.appendleft(v)         # 비용 0: 앞에 넣어 먼저 처리\n            else:\n                dq.append(v)             # 비용 1: 뒤에 넣기\nprint(*dist[1:])\n",
+        "output": "0 0 1 1 1\n"
+      },
+      {
+        "title": "플로이드-워셜: 모든 쌍의 최단 거리",
+        "code": "INF = float('inf')\nn = 4\nd = [[INF] * n for _ in range(n)]        # [[INF] * n] * n 은 같은 행을 공유해서 틀려요\nfor i in range(n):\n    d[i][i] = 0\nfor u, v, w in [(0, 1, 5), (0, 2, 9), (1, 2, 2), (2, 3, 1), (3, 1, 4)]:\n    d[u][v] = min(d[u][v], w)            # 같은 두 정점 사이 간선이 여러 개일 수 있어요\n\nfor k in range(n):                       # 거쳐 가는 정점 k 가 가장 바깥\n    for i in range(n):\n        for j in range(n):\n            if d[i][k] + d[k][j] < d[i][j]:\n                d[i][j] = d[i][k] + d[k][j]\n\nfor row in d:\n    print(' '.join('INF' if x == INF else str(x) for x in row))\n",
+        "output": "0 5 7 8\nINF 0 2 3\nINF 5 0 1\nINF 4 6 0\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "heapq.heappush(pq, (v, dist[v]))",
+        "right": "heapq.heappush(pq, (dist[v], v))",
+        "why": "튜플은 첫 원소부터 비교해요. 정점 번호를 앞에 두면 번호가 작은 정점이 먼저 나와서 다익스트라가 아니게 돼요."
+      },
+      {
+        "wrong": "d, u = heapq.heappop(pq)\nfor v, w in graph[u]: ...",
+        "right": "d, u = heapq.heappop(pq)\nif d > dist[u]:\n    continue\nfor v, w in graph[u]: ...",
+        "why": "같은 정점이 힙에 여러 번 들어가요. 오래된 항목을 건너뛰지 않으면 같은 정점의 간선을 몇 번이고 다시 훑어서 느려져요."
+      },
+      {
+        "wrong": "for i in range(n):\n    for j in range(n):\n        for k in range(n):",
+        "right": "for k in range(n):\n    for i in range(n):\n        for j in range(n):",
+        "why": "플로이드-워셜은 거쳐 가는 정점 k 가 가장 바깥 반복이어야 해요. 순서를 바꾸면 아직 확정되지 않은 거리로 계산해서 더 긴 값이 남을 수 있어요."
+      },
+      {
+        "wrong": "d = [[INF] * n] * n",
+        "right": "d = [[INF] * n for _ in range(n)]",
+        "why": "[[INF] * n] * n 은 같은 행 하나를 n번 가리켜요. d[0][1] 을 바꾸면 모든 행의 1열이 같이 바뀌어요."
+      },
+      {
+        "wrong": "print(dist[v])",
+        "right": "print(dist[v] if dist[v] != INF else -1)",
+        "why": "도달하지 못한 정점은 inf 로 출력돼요. 문제의 표기(-1 등)로 바꿔야 해요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "priority_queue (최소 힙)",
+        "signature": "priority_queue<pair<long long,int>, vector<pair<long long,int>>, greater<pair<long long,int>>> pq;",
+        "does": "(거리, 정점) 쌍에서 거리가 가장 작은 것을 top() 으로 꺼내요. greater<> 가 없으면 최대 힙이에요.",
+        "when": "다익스트라에서 다음에 확정할 정점을 고를 때 써요.",
+        "complexity": "push/pop O(log N), top O(1)"
+      },
+      {
+        "name": "다익스트라",
+        "signature": "vector<long long> dist(n + 1, INF); dist[s] = 0; pq.push({0, s});",
+        "does": "가장 가까운 정점부터 꺼내 이웃 거리를 줄여요. if (d > dist[u]) continue; 로 오래된 항목을 건너뛰어요.",
+        "when": "가중치가 모두 0 이상이고 한 출발점에서의 거리가 필요할 때 써요.",
+        "complexity": "O((V + E) log V)"
+      },
+      {
+        "name": "0-1 BFS",
+        "signature": "dq.push_front(v);  // 가중치 0\ndq.push_back(v);   // 가중치 1",
+        "does": "deque<int> 로 비용 0 간선은 앞에, 비용 1 간선은 뒤에 넣어요.",
+        "when": "가중치가 0과 1 두 가지뿐일 때 힙 없이 써요.",
+        "complexity": "O(V + E)"
+      },
+      {
+        "name": "플로이드-워셜",
+        "signature": "for (int k = 0; k < n; k++)\n  for (int i = 0; i < n; i++)\n    for (int j = 0; j < n; j++)\n      d[i][j] = min(d[i][j], d[i][k] + d[k][j]);",
+        "does": "거쳐 가는 정점 k 를 하나씩 늘리며 모든 쌍의 거리를 갱신해요.",
+        "when": "정점이 수백 개 이하이고 모든 쌍의 거리가 필요할 때 써요.",
+        "complexity": "O(V^3)"
+      },
+      {
+        "name": "벨만-포드",
+        "signature": "for (int it = 0; it < n - 1; it++)\n  for (auto [u, v, w] : edges)\n    if (dist[u] != INF && dist[u] + w < dist[v]) dist[v] = dist[u] + w;",
+        "does": "모든 간선을 V-1번 완화해요. V번째에도 줄어드는 거리가 있으면 음수 사이클이 있어요.",
+        "when": "음수 간선이 있거나 음수 사이클을 찾아야 할 때 써요.",
+        "complexity": "O(V · E)"
+      },
+      {
+        "name": "INF 상수",
+        "signature": "const long long INF = 1e18;",
+        "does": "도달하지 못한 거리를 나타내요. 1e18 은 두 번 더해도 long long 범위(약 9.2e18) 안이에요.",
+        "when": "거리 합이 int 를 넘을 수 있으면 dist 를 long long 으로 둬요.",
+        "complexity": "O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "다익스트라: 1번에서 모든 정점까지(도달 못하면 -1)",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n, m, s;\n    cin >> n >> m >> s;\n    vector<vector<pair<int, int>>> graph(n + 1);\n    for (int i = 0; i < m; i++) {\n        int u, v, w;\n        cin >> u >> v >> w;\n        graph[u].push_back({v, w});      // 방향 간선 u -> v (가중치 w)\n    }\n\n    const long long INF = 1e18;\n    vector<long long> dist(n + 1, INF);\n    // greater<> 를 넣어야 최소 힙이 돼요 (기본은 최대 힙)\n    priority_queue<pair<long long, int>, vector<pair<long long, int>>, greater<pair<long long, int>>> pq;\n    dist[s] = 0;\n    pq.push({0, s});\n    while (!pq.empty()) {\n        auto [d, u] = pq.top();\n        pq.pop();\n        if (d > dist[u]) continue;       // 이미 더 짧은 거리로 처리한 정점\n        for (auto [v, w] : graph[u]) {\n            long long nd = d + w;\n            if (nd < dist[v]) {\n                dist[v] = nd;\n                pq.push({nd, v});\n            }\n        }\n    }\n\n    for (int v = 1; v <= n; v++) {\n        cout << (dist[v] == INF ? -1 : dist[v]) << '\\n';\n    }\n    return 0;\n}\n",
+        "stdin": "5 6 1\n1 2 4\n1 3 1\n3 2 2\n2 4 5\n3 4 8\n4 1 3\n",
+        "output": "0\n3\n1\n8\n-1\n"
+      },
+      {
+        "title": "0-1 BFS: 가중치가 0과 1뿐인 그래프",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n = 5;\n    vector<array<int, 3>> edges = {{1, 2, 0}, {1, 3, 1}, {2, 3, 1}, {2, 4, 1}, {3, 5, 0}, {4, 5, 0}};\n    vector<vector<pair<int, int>>> graph(n + 1);\n    for (auto [u, v, w] : edges) {       // 양방향 간선, 가중치는 0 또는 1\n        graph[u].push_back({v, w});\n        graph[v].push_back({u, w});\n    }\n\n    const int INF = INT_MAX;\n    vector<int> dist(n + 1, INF);\n    deque<int> dq;\n    dist[1] = 0;\n    dq.push_back(1);\n    while (!dq.empty()) {\n        int u = dq.front();\n        dq.pop_front();\n        for (auto [v, w] : graph[u]) {\n            if (dist[u] + w < dist[v]) {\n                dist[v] = dist[u] + w;\n                if (w == 0) dq.push_front(v);   // 비용 0: 앞에 넣어 먼저 처리\n                else dq.push_back(v);           // 비용 1: 뒤에 넣기\n            }\n        }\n    }\n    for (int v = 1; v <= n; v++) cout << dist[v] << (v == n ? '\\n' : ' ');\n    return 0;\n}\n",
+        "output": "0 0 1 1 1\n"
+      },
+      {
+        "title": "플로이드-워셜: 모든 쌍의 최단 거리",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    const long long INF = 1e18;          // INF + INF 도 long long 범위 안이에요\n    int n = 4;\n    vector<vector<long long>> d(n, vector<long long>(n, INF));\n    for (int i = 0; i < n; i++) d[i][i] = 0;\n    vector<array<int, 3>> edges = {{0, 1, 5}, {0, 2, 9}, {1, 2, 2}, {2, 3, 1}, {3, 1, 4}};\n    for (auto [u, v, w] : edges) d[u][v] = min(d[u][v], (long long)w);\n\n    for (int k = 0; k < n; k++)          // 거쳐 가는 정점 k 가 가장 바깥\n        for (int i = 0; i < n; i++)\n            for (int j = 0; j < n; j++)\n                if (d[i][k] < INF && d[k][j] < INF)\n                    d[i][j] = min(d[i][j], d[i][k] + d[k][j]);\n\n    for (int i = 0; i < n; i++) {\n        for (int j = 0; j < n; j++) {\n            if (j) cout << ' ';\n            if (d[i][j] == INF) cout << \"INF\";\n            else cout << d[i][j];\n        }\n        cout << '\\n';\n    }\n    return 0;\n}\n",
+        "output": "0 5 7 8\nINF 0 2 3\nINF 5 0 1\nINF 4 6 0\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "priority_queue<pair<long long,int>> pq;",
+        "right": "priority_queue<pair<long long,int>, vector<pair<long long,int>>, greater<pair<long long,int>>> pq;\n// 또는 pq.push({-d, v}) 로 넣고 꺼낼 때 부호를 되돌리기",
+        "why": "priority_queue 는 기본이 최대 힙이라 가장 먼 정점부터 꺼내요(Python heapq 와 반대). 답은 맞을 수 있어도 매우 느려져요."
+      },
+      {
+        "wrong": "auto [d, u] = pq.top(); pq.pop();\nfor (auto [v, w] : graph[u]) ...",
+        "right": "auto [d, u] = pq.top(); pq.pop();\nif (d > dist[u]) continue;\nfor (auto [v, w] : graph[u]) ...",
+        "why": "같은 정점이 큐에 여러 번 들어가요. 오래된 항목을 건너뛰지 않으면 같은 간선을 몇 번이고 다시 훑어서 느려져요."
+      },
+      {
+        "wrong": "const int INF = 1e9;\nvector<int> dist(n + 1, INF);",
+        "right": "const long long INF = 1e18;\nvector<long long> dist(n + 1, INF);",
+        "why": "가중치 합이 2^31-1(약 2.1e9)을 넘으면 int 가 넘쳐 음수가 될 수 있어요. 거리는 long long 으로 둬요."
+      },
+      {
+        "wrong": "const long long INF = LLONG_MAX;\nd[i][j] = min(d[i][j], d[i][k] + d[k][j]);",
+        "right": "const long long INF = 1e18;\nif (d[i][k] < INF && d[k][j] < INF)\n    d[i][j] = min(d[i][j], d[i][k] + d[k][j]);",
+        "why": "LLONG_MAX 끼리 더하면 오버플로(정의되지 않은 동작)예요. INF 를 1e18 로 두고 INF 인 칸은 건너뛰어요."
+      },
+      {
+        "wrong": "for (int i...) for (int j...) for (int k...)",
+        "right": "for (int k...) for (int i...) for (int j...)",
+        "why": "플로이드-워셜은 거쳐 가는 정점 k 가 가장 바깥 반복이어야 해요. 순서를 바꾸면 더 긴 값이 남을 수 있어요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "가중치가 없거나 모두 같을 때",
+      "use": "BFS"
+    },
+    {
+      "situation": "가중치가 0 또는 1뿐일 때",
+      "use": "0-1 BFS(덱)"
+    },
+    {
+      "situation": "가중치가 0 이상이고 출발점이 하나일 때",
+      "use": "다익스트라(힙)"
+    },
+    {
+      "situation": "정점이 약 400개 이하이고 모든 쌍의 거리가 필요할 때",
+      "use": "플로이드-워셜"
+    },
+    {
+      "situation": "음수 간선이 있거나 음수 사이클을 찾아야 할 때",
+      "use": "벨만-포드"
+    }
+  ],
+  "checklist": [
+    "간선이 방향인지 양방향인지 확인했나요? 양방향이면 두 번 넣어요.",
+    "거리 합이 int 범위를 넘나요? C++ 은 long long 으로 둬요.",
+    "도달하지 못한 정점의 출력 형식(-1, INF 등)을 맞췄나요?",
+    "다익스트라에서 꺼낸 거리가 dist 보다 크면 건너뛰나요?",
+    "음수 간선이 있는데 다익스트라를 쓰고 있지 않나요?",
+    "같은 두 정점 사이에 간선이 여러 개일 수 있나요? 플로이드는 min 으로 넣어요."
+  ]
+}
