@@ -1,0 +1,253 @@
+{
+  "slug": "io-fast-input",
+  "title": "입출력과 빠른 입력",
+  "category": "기초 문법",
+  "order": 1,
+  "summary": "input·sys.stdin, cin 설정으로 많은 입력을 빠르고 정확하게 읽고 한 번에 출력해요",
+  "when": [
+    "입력 줄이 10^5개 이상으로 많을 때",
+    "한 줄에 여러 수가 공백으로 섞여 들어올 때",
+    "줄 수가 주어지지 않아 입력 끝(EOF)까지 읽어야 할 때",
+    "공백이 들어 있는 한 줄을 통째로 읽어야 할 때",
+    "출력할 줄이 많아 한 줄씩 출력하면 느릴 때"
+  ],
+  "topics": [],
+  "python": {
+    "items": [
+      {
+        "name": "input",
+        "signature": "input()",
+        "does": "한 줄을 읽고 끝의 줄바꿈을 뺀 문자열을 돌려줘요.",
+        "when": "입력이 수백 줄 이하로 적을 때 써요.",
+        "complexity": "O(L) (L = 줄 길이)"
+      },
+      {
+        "name": "sys.stdin.readline",
+        "signature": "import sys\ninput = sys.stdin.readline",
+        "does": "한 줄을 읽어요. input() 보다 빠르지만 끝의 '\\n' 이 남아 있어요.",
+        "when": "줄이 10^5개 이상일 때 input 을 이걸로 바꿔요.",
+        "complexity": "O(L)"
+      },
+      {
+        "name": "sys.stdin.read().split()",
+        "signature": "data = sys.stdin.read().split()",
+        "does": "입력 전체를 한 번에 읽어 공백·줄바꿈 기준으로 나눈 토큰 리스트를 만들어요.",
+        "when": "줄 구분이 중요하지 않고 수가 아주 많을 때 가장 빨라요.",
+        "complexity": "O(S) (S = 전체 입력 크기)"
+      },
+      {
+        "name": "map(int, split())",
+        "signature": "a, b = map(int, input().split())",
+        "does": "한 줄의 토큰을 정수로 바꿔 변수 여러 개에 나눠 담아요.",
+        "when": "한 줄에 개수가 정해진 수가 있을 때 써요.",
+        "complexity": "O(L)"
+      },
+      {
+        "name": "list(map(int, ...))",
+        "signature": "arr = list(map(int, input().split()))",
+        "does": "한 줄의 수를 정수 리스트로 만들어요.",
+        "when": "한 줄에 N개의 수가 들어올 때 써요.",
+        "complexity": "O(L)"
+      },
+      {
+        "name": "for line in sys.stdin",
+        "signature": "for line in sys.stdin:",
+        "does": "입력 끝(EOF)까지 한 줄씩 돌아요. 줄에는 '\\n' 이 붙어 있어요.",
+        "when": "줄 수가 주어지지 않을 때 써요.",
+        "complexity": "O(S)"
+      },
+      {
+        "name": "print(*arr)",
+        "signature": "print(*arr, sep=' ', end='\\n')",
+        "does": "리스트를 풀어서 공백으로 이어 출력해요. sep, end 로 구분자와 끝 문자를 바꿔요.",
+        "when": "한 줄에 여러 값을 출력할 때 써요.",
+        "complexity": "O(출력 길이)"
+      },
+      {
+        "name": "'\\n'.join + sys.stdout.write",
+        "signature": "sys.stdout.write('\\n'.join(map(str, res)) + '\\n')",
+        "does": "결과를 문자열 하나로 모아 한 번에 출력해요.",
+        "when": "출력 줄이 10^5개 이상일 때 써요.",
+        "complexity": "O(출력 길이)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "readline 으로 여러 줄 빠르게 읽기",
+        "code": "import sys\ninput = sys.stdin.readline\n\nn = int(input())\ntotal = 0\nfor _ in range(n):\n    a, b = map(int, input().split())\n    total += a * b\nprint(total)\n",
+        "stdin": "3\n1 2\n3 4\n5 6\n",
+        "output": "44\n"
+      },
+      {
+        "title": "read().split() 으로 토큰 한꺼번에 읽기",
+        "code": "import sys\n\ndata = sys.stdin.read().split()\nn = int(data[0])\narr = list(map(int, data[1:1 + n]))\nprint(max(arr), min(arr), sum(arr))\nprint(*sorted(arr))\n",
+        "stdin": "5\n3 -1 4\n1 5\n",
+        "output": "5 -1 12\n-1 1 3 4 5\n"
+      },
+      {
+        "title": "EOF 까지 읽고 모아서 한 번에 출력",
+        "code": "import sys\n\nout = []\nfor line in sys.stdin:\n    line = line.strip()\n    if not line:\n        continue\n    a, b = map(int, line.split())\n    out.append(str(a + b))\nsys.stdout.write(\"\\n\".join(out) + \"\\n\")\n",
+        "stdin": "1 2\n10 20\n\n-5 5\n",
+        "output": "3\n30\n0\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "input = sys.stdin.readline\ns = input()\nif s == \"yes\": ...",
+        "right": "s = input().rstrip()",
+        "why": "readline 은 끝의 '\\n' 을 남겨서 \"yes\\n\" == \"yes\" 가 False 예요. int() 는 공백을 무시해서 숫자는 괜찮지만 문자열은 꼭 rstrip() 해요."
+      },
+      {
+        "wrong": "a, b = input().split()\nprint(a + b)",
+        "right": "a, b = map(int, input().split())",
+        "why": "split() 결과는 문자열이라 \"1\" + \"2\" 가 \"12\" 가 돼요."
+      },
+      {
+        "wrong": "print(\"\\n\".join(res))  # res 는 int 리스트",
+        "right": "print(\"\\n\".join(map(str, res)))",
+        "why": "join 은 문자열만 받아서 TypeError 가 나요."
+      },
+      {
+        "wrong": "for x in res:\n    print(x)  # 10^5줄 이상",
+        "right": "print(\"\\n\".join(map(str, res)))",
+        "why": "print 를 아주 많이 부르면 느려요. 모아서 한 번에 출력해요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "빠른 입출력 설정",
+        "signature": "ios::sync_with_stdio(false);\ncin.tie(nullptr);",
+        "does": "C 입출력(stdio)과의 동기화를 끄고, 입력할 때마다 cout 을 비우지 않게 해요.",
+        "when": "입력이 많을 때 main 첫 줄에 넣어요.",
+        "complexity": "상수 배 개선"
+      },
+      {
+        "name": "cin >>",
+        "signature": "cin >> x;",
+        "does": "공백·줄바꿈을 건너뛰고 토큰 하나를 읽어 변수 타입으로 바꿔요.",
+        "when": "수나 단어를 하나씩 읽을 때 써요.",
+        "complexity": "O(토큰 길이)"
+      },
+      {
+        "name": "while (cin >> x)",
+        "signature": "while (cin >> x) { ... }",
+        "does": "더 읽을 게 없거나 읽기에 실패하면 거짓이 돼서 멈춰요.",
+        "when": "개수가 주어지지 않아 EOF 까지 읽을 때 써요.",
+        "complexity": "O(S) (S = 전체 입력 크기)"
+      },
+      {
+        "name": "getline",
+        "signature": "getline(cin, s);",
+        "does": "줄바꿈 전까지 한 줄 전체(공백 포함)를 읽고 줄바꿈은 버려요.",
+        "when": "공백이 들어 있는 문자열을 읽을 때 써요.",
+        "complexity": "O(L) (L = 줄 길이)"
+      },
+      {
+        "name": "cin >> ws",
+        "signature": "getline(cin >> ws, s);",
+        "does": "앞에 남은 공백·줄바꿈을 건너뛴 뒤 getline 을 해요. 줄 앞쪽 공백도 같이 사라져요.",
+        "when": "cin >> n 다음에 getline 을 쓸 때 써요.",
+        "complexity": "O(L)"
+      },
+      {
+        "name": "istringstream",
+        "signature": "istringstream iss(line);\nwhile (iss >> x) { ... }",
+        "does": "문자열을 입력 스트림처럼 읽어요.",
+        "when": "한 줄 안에 몇 개인지 모르는 수가 있을 때 써요.",
+        "complexity": "O(L)"
+      },
+      {
+        "name": "'\\n' 과 endl",
+        "signature": "cout << x << '\\n';",
+        "does": "'\\n' 은 줄만 바꾸고, endl 은 줄을 바꾼 뒤 버퍼를 비워요(flush).",
+        "when": "출력이 많으면 항상 '\\n' 을 써요.",
+        "complexity": "endl 은 호출마다 flush 비용"
+      },
+      {
+        "name": "scanf / printf",
+        "signature": "scanf(\"%d\", &x);\nprintf(\"%d\\n\", x);",
+        "does": "C 스타일 입출력이에요. 형식 문자열로 타입을 지정해요(long long 은 %lld).",
+        "when": "cin/cout 대신 쓸 때는 한 프로그램에서 한 가지만 써요.",
+        "complexity": "O(토큰 길이)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "빠른 입출력 설정 후 여러 줄 읽기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n\n    int n;\n    cin >> n;\n    long long total = 0;\n    for (int i = 0; i < n; i++) {\n        long long a, b;\n        cin >> a >> b;\n        total += a * b;\n    }\n    cout << total << '\\n';\n    return 0;\n}\n",
+        "stdin": "3\n1 2\n3 4\n5 6\n",
+        "output": "44\n"
+      },
+      {
+        "title": "cin >> 다음에 getline 쓰기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    string line;\n    getline(cin, line);  // n 뒤에 남은 줄바꿈을 버려요\n    for (int i = 1; i <= n; i++) {\n        getline(cin, line);\n        cout << i << \": [\" << line << \"]\\n\";\n    }\n    return 0;\n}\n",
+        "stdin": "2\nhello world\n  two  spaces\n",
+        "output": "1: [hello world]\n2: [  two  spaces]\n"
+      },
+      {
+        "title": "EOF 까지 줄 단위로 읽고 istringstream 으로 나누기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string line;\n    while (getline(cin, line)) {\n        if (line.empty()) continue;\n        istringstream iss(line);\n        long long x, sum = 0;\n        int cnt = 0;\n        while (iss >> x) {\n            sum += x;\n            cnt++;\n        }\n        cout << cnt << ' ' << sum << '\\n';\n    }\n    return 0;\n}\n",
+        "stdin": "1 2 3\n10\n\n-4 4\n",
+        "output": "3 6\n1 10\n2 0\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "cin >> n;\ngetline(cin, s);",
+        "right": "cin >> n;\ngetline(cin >> ws, s);",
+        "why": "cin >> n 은 줄바꿈을 남겨 둬서 바로 다음 getline 이 빈 문자열을 읽어요."
+      },
+      {
+        "wrong": "cout << x << endl;  // 10^5번",
+        "right": "cout << x << '\\n';",
+        "why": "endl 은 매번 버퍼를 비워서 출력이 많으면 느려요."
+      },
+      {
+        "wrong": "ios::sync_with_stdio(false);\ncout << \"A\\n\";\nprintf(\"B\\n\");",
+        "right": "cout 만 쓰거나 printf 만 써요",
+        "why": "동기화를 끄면 버퍼가 따로라 출력 순서가 섞여요(실제로 B 가 A 보다 먼저 나올 수 있어요)."
+      },
+      {
+        "wrong": "while (!cin.eof()) {\n    cin >> x;\n    v.push_back(x);\n}",
+        "right": "while (cin >> x) v.push_back(x);",
+        "why": "마지막 수 뒤의 줄바꿈 때문에 eof 가 한 번 늦게 켜져서, 실패한 읽기 뒤의 값이 하나 더 들어가요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "입력이 수백 줄 이하예요",
+      "use": "Python input(), C++ cin 그대로 써도 돼요"
+    },
+    {
+      "situation": "입력 줄이 10^5개 이상이에요",
+      "use": "Python input = sys.stdin.readline, C++ sync_with_stdio(false) + cin.tie(nullptr)"
+    },
+    {
+      "situation": "줄 구분 없이 수만 아주 많아요",
+      "use": "Python sys.stdin.read().split(), C++ cin >> 반복"
+    },
+    {
+      "situation": "공백이 섞인 한 줄을 통째로 읽어요",
+      "use": "Python input().rstrip('\\n'), C++ getline"
+    },
+    {
+      "situation": "입력 끝이 주어지지 않아요",
+      "use": "Python for line in sys.stdin, C++ while (cin >> x) 또는 while (getline(cin, s))"
+    },
+    {
+      "situation": "출력이 10^5줄 이상이에요",
+      "use": "Python '\\n'.join 으로 한 번에, C++ endl 대신 '\\n'"
+    }
+  ],
+  "checklist": [
+    "Python 에서 input = sys.stdin.readline 을 썼다면 문자열 입력에 rstrip() 을 붙였나요?",
+    "C++ main 첫 줄에 ios::sync_with_stdio(false); cin.tie(nullptr); 를 넣었나요?",
+    "C++ 에서 endl 대신 '\\n' 을 쓰나요?",
+    "cin >> 다음에 getline 을 쓴다면 남은 줄바꿈을 처리했나요?",
+    "동기화를 끈 뒤 cin/cout 과 scanf/printf 를 섞어 쓰지 않았나요?",
+    "출력 형식(공백 구분인지 줄 구분인지)이 문제와 같나요?"
+  ]
+}
