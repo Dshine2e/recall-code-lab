@@ -1,0 +1,252 @@
+{
+  "slug": "complexity-guide",
+  "title": "시간 복잡도와 입력 크기 가이드",
+  "category": "실전 팁",
+  "order": 1,
+  "summary": "입력 크기 N 을 보고 허용되는 시간 복잡도와 숨은 O(N) 연산을 가려내는 기준",
+  "when": [
+    "문제를 읽고 풀이 방향을 정하기 전에",
+    "완전탐색이 시간 안에 될지 판단할 때",
+    "시간 초과가 났는데 이유를 모를 때",
+    "Python 으로 풀어도 될지 판단할 때",
+    "반복문 안에서 쓰는 연산의 비용을 확인할 때"
+  ],
+  "topics": [],
+  "python": {
+    "items": [
+      {
+        "name": "리스트 in vs 집합 in",
+        "signature": "x in lst / x in st",
+        "does": "리스트는 앞에서부터 하나씩 비교하고, set 은 해시로 바로 찾아요.",
+        "when": "반복문 안에서 포함 여부를 확인하면 set 을 써요.",
+        "complexity": "리스트 O(N), set 평균 O(1)"
+      },
+      {
+        "name": "list.pop(0) vs deque.popleft()",
+        "signature": "lst.pop(0) / dq.popleft()",
+        "does": "리스트 앞에서 빼면 뒤 원소를 모두 당겨요. deque 는 양끝이 O(1) 이에요.",
+        "when": "큐는 항상 deque 로 만들어요.",
+        "complexity": "pop(0) O(N), popleft O(1)"
+      },
+      {
+        "name": "list.insert(0, x)",
+        "signature": "lst.insert(i, x)",
+        "does": "i 뒤의 원소를 모두 밀어요.",
+        "when": "앞에 자주 넣어야 하면 deque.appendleft 를 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "슬라이스",
+        "signature": "a[l:r]",
+        "does": "새 리스트를 복사해서 만들어요.",
+        "when": "반복문 안에서 슬라이스를 만들면 비용을 꼭 따져요.",
+        "complexity": "O(r-l)"
+      },
+      {
+        "name": "정렬",
+        "signature": "a.sort(), sorted(a)",
+        "does": "Timsort 로 정렬해요.",
+        "when": "정렬이 한 번이면 대부분 괜찮아요.",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "dict / set 연산",
+        "signature": "d[k], k in d, s.add(x)",
+        "does": "해시로 넣고 찾고 지워요.",
+        "when": "개수 세기·방문 확인에 써요.",
+        "complexity": "평균 O(1)"
+      },
+      {
+        "name": "heapq",
+        "signature": "heappush(h, x), heappop(h)",
+        "does": "최소 힙에 넣고 가장 작은 값을 빼요.",
+        "when": "매번 최솟값이 필요할 때 써요.",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "bisect",
+        "signature": "bisect_left(a, x)",
+        "does": "정렬된 리스트에서 위치를 이분 탐색으로 찾아요. insort 는 찾은 뒤 끼워 넣어서 O(N) 이에요.",
+        "when": "정렬된 배열에서 위치를 찾을 때 써요.",
+        "complexity": "탐색 O(log N), insort O(N)"
+      },
+      {
+        "name": "sum / max / min / len",
+        "signature": "sum(a), max(a), len(a)",
+        "does": "sum·max·min 은 전체를 훑고, len 은 저장된 길이를 돌려줘요.",
+        "when": "반복문 안에서 sum/max 를 다시 부르지 않게 해요.",
+        "complexity": "len O(1), 나머지 O(N)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "N 에 따른 연산 횟수 어림",
+        "code": "import math\n\nprint(f\"{'N':>7} {'N log N':>10} {'N^2':>12} {'2^N':>8}\")\nfor n in [10, 20, 1000, 100000, 200000]:\n    nlogn = int(n * math.log2(n))\n    two = str(2 ** n) if n <= 20 else \"-\"\n    print(f\"{n:>7} {nlogn:>10} {n * n:>12} {two:>8}\")\n",
+        "stdin": "",
+        "output": "      N    N log N          N^2      2^N\n     10         33          100     1024\n     20         86          400  1048576\n   1000       9965      1000000        -\n 100000    1660964  10000000000        -\n 200000    3521928  40000000000        -\n"
+      },
+      {
+        "title": "같은 답, 다른 복잡도: 합이 K 인 쌍 세기",
+        "code": "import sys\nfrom collections import Counter\n\ndata = sys.stdin.read().split()\nn, k = int(data[0]), int(data[1])\na = list(map(int, data[2:2 + n]))\n\nsteps1 = cnt1 = 0\nfor i in range(n):           # O(N^2)\n    for j in range(i + 1, n):\n        steps1 += 1\n        if a[i] + a[j] == k:\n            cnt1 += 1\n\nsteps2 = cnt2 = 0\nseen = Counter()\nfor x in a:                  # O(N)\n    steps2 += 1\n    cnt2 += seen[k - x]\n    seen[x] += 1\n\nprint(cnt1, steps1)\nprint(cnt2, steps2)\n",
+        "stdin": "8 10\n1 9 5 5 3 7 2 8\n",
+        "output": "4 28\n4 8\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "while q:\n    x = q.pop(0)",
+        "right": "from collections import deque\nq = deque(q)\nwhile q:\n    x = q.popleft()",
+        "why": "pop(0) 은 O(N) 이라 큐 전체가 O(N^2) 이 돼요."
+      },
+      {
+        "wrong": "for x in queries:\n    if x in big_list: ...",
+        "right": "big_set = set(big_list)\nfor x in queries:\n    if x in big_set: ...",
+        "why": "리스트 in 은 O(N) 이라 질의 Q 개면 O(N·Q) 예요. set 은 평균 O(1) 이에요."
+      },
+      {
+        "wrong": "for i in range(n):\n    best = max(a[:i + 1])",
+        "right": "best = a[0]\nfor i in range(n):\n    best = max(best, a[i])",
+        "why": "슬라이스와 max 가 매번 O(i) 라 전체 O(N^2) 이에요. 값을 이어서 갱신해요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "vector push_back",
+        "signature": "v.push_back(x);",
+        "does": "끝에 붙여요. 가끔 전체를 옮겨 늘리지만 평균으로 보면 빨라요.",
+        "when": "끝에 계속 추가할 때 써요.",
+        "complexity": "상각 O(1)"
+      },
+      {
+        "name": "vector 앞·중간 insert/erase",
+        "signature": "v.insert(v.begin(), x); v.erase(v.begin());",
+        "does": "뒤 원소를 모두 옮겨요.",
+        "when": "앞에서 자주 넣고 빼면 deque 를 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "sort",
+        "signature": "sort(v.begin(), v.end());",
+        "does": "정렬해요.",
+        "when": "정렬이 한 번이면 대부분 괜찮아요.",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "set / map",
+        "signature": "s.insert(x); s.find(x); m[k];",
+        "does": "균형 이진 트리로 정렬된 채 넣고 찾아요.",
+        "when": "정렬 순서나 lower_bound 가 필요할 때 써요.",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "unordered_set / unordered_map",
+        "signature": "us.insert(x); um[k];",
+        "does": "해시로 넣고 찾아요.",
+        "when": "순서가 필요 없고 빠른 조회만 필요할 때 써요.",
+        "complexity": "평균 O(1), 최악 O(N)"
+      },
+      {
+        "name": "lower_bound (vector)",
+        "signature": "lower_bound(v.begin(), v.end(), x)",
+        "does": "정렬된 vector 에서 x 이상이 처음 나오는 위치를 찾아요.",
+        "when": "정렬된 배열의 이분 탐색에 써요.",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "set::lower_bound",
+        "signature": "s.lower_bound(x)",
+        "does": "set 안에서 x 이상인 첫 원소를 찾아요.",
+        "when": "set/map 에서는 멤버 함수를 써요.",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "priority_queue",
+        "signature": "pq.push(x); pq.top(); pq.pop();",
+        "does": "가장 큰 값을 꺼내는 힙이에요.",
+        "when": "매번 최댓값(또는 최솟값)이 필요할 때 써요.",
+        "complexity": "push/pop O(log N), top O(1)"
+      },
+      {
+        "name": "deque",
+        "signature": "dq.push_front(x); dq.pop_front();",
+        "does": "양끝에서 넣고 빼요.",
+        "when": "큐·덱이 필요할 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "memset / fill",
+        "signature": "fill(a, a + n, 0);",
+        "does": "배열을 값으로 채워요.",
+        "when": "테스트 케이스마다 필요한 크기만 초기화해요.",
+        "complexity": "O(채우는 크기)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "N 에 따른 연산 횟수 어림",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    printf(\"%7s %10s %12s %8s\\n\", \"N\", \"N log N\", \"N^2\", \"2^N\");\n    for (long long n : {10LL, 20LL, 1000LL, 100000LL, 200000LL}) {\n        long long nlogn = (long long)(n * log2((double)n));\n        string two = n <= 20 ? to_string(1LL << n) : \"-\";\n        printf(\"%7lld %10lld %12lld %8s\\n\", n, nlogn, n * n, two.c_str());\n    }\n    return 0;\n}\n",
+        "stdin": "",
+        "output": "      N    N log N          N^2      2^N\n     10         33          100     1024\n     20         86          400  1048576\n   1000       9965      1000000        -\n 100000    1660964  10000000000        -\n 200000    3521928  40000000000        -\n"
+      },
+      {
+        "title": "같은 답, 다른 복잡도: 합이 K 인 쌍 세기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    long long k;\n    cin >> n >> k;\n    vector<long long> a(n);\n    for (auto &x : a) cin >> x;\n\n    long long steps1 = 0, cnt1 = 0;\n    for (int i = 0; i < n; i++)          // O(N^2)\n        for (int j = i + 1; j < n; j++) {\n            steps1++;\n            if (a[i] + a[j] == k) cnt1++;\n        }\n\n    long long steps2 = 0, cnt2 = 0;\n    unordered_map<long long, long long> seen;\n    for (long long x : a) {              // 평균 O(N)\n        steps2++;\n        auto it = seen.find(k - x);\n        if (it != seen.end()) cnt2 += it->second;\n        seen[x]++;\n    }\n    cout << cnt1 << ' ' << steps1 << '\\n';\n    cout << cnt2 << ' ' << steps2 << '\\n';\n    return 0;\n}\n",
+        "stdin": "8 10\n1 9 5 5 3 7 2 8\n",
+        "output": "4 28\n4 8\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "lower_bound(s.begin(), s.end(), x)  // s 는 set",
+        "right": "s.lower_bound(x)",
+        "why": "set 반복자는 임의 접근이 안 돼서 std::lower_bound 가 O(N) 이 돼요. 멤버 함수는 O(log N) 이에요."
+      },
+      {
+        "wrong": "while (!v.empty()) {\n    int x = v.front();\n    v.erase(v.begin());\n}",
+        "right": "deque<int> q(v.begin(), v.end());\nwhile (!q.empty()) {\n    int x = q.front();\n    q.pop_front();\n}",
+        "why": "vector 앞에서 지우면 매번 O(N) 이라 전체 O(N^2) 이에요."
+      },
+      {
+        "wrong": "int a[1000001];\nwhile (T--) {\n    memset(a, 0, sizeof a);  // T 가 크면\n}",
+        "right": "while (T--) {\n    fill(a, a + n + 1, 0);  // 쓰는 만큼만\n}",
+        "why": "테스트 케이스마다 전체 배열을 지우면 O(T·MAX) 가 돼요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "N ≤ 10 정도예요",
+      "use": "O(N!) — 순열 완전탐색도 돼요"
+    },
+    {
+      "situation": "N ≤ 20 정도예요",
+      "use": "O(2^N) 또는 O(2^N·N) — 부분집합, 비트마스크"
+    },
+    {
+      "situation": "N ≤ 500 정도예요",
+      "use": "O(N^3) — 3중 반복문, 플로이드 워셜"
+    },
+    {
+      "situation": "N ≤ 5,000 정도예요",
+      "use": "O(N^2) — 2중 반복문, 2차원 DP"
+    },
+    {
+      "situation": "N 이 10^5 ~ 10^6 이에요",
+      "use": "O(N log N) 또는 O(N) — 정렬, 이분 탐색, 투 포인터, 해시, 힙"
+    },
+    {
+      "situation": "N 이 10^9 이상이에요",
+      "use": "O(log N) 또는 O(√N) — 이분 탐색, 거듭제곱, 수학 공식"
+    }
+  ],
+  "checklist": [
+    "제약에서 가장 큰 N(과 테스트 케이스 수)을 확인했나요?",
+    "복잡도에 N 최댓값을 넣어 연산 횟수를 어림했나요? (대략 Python 1초에 10^7, C++ 1초에 10^8 을 기준으로 잡아요)",
+    "반복문 안에 숨은 O(N) 연산(pop(0), 리스트 in, 슬라이스, insert/erase)이 없나요?",
+    "여러 테스트 케이스에서 매번 큰 배열 전체를 만들거나 지우지 않나요?",
+    "set/map 에 std::lower_bound 대신 멤버 lower_bound 를 썼나요?",
+    "Python 이 아슬아슬하면 상수를 줄이거나(빠른 입력, 내장 함수) 더 나은 복잡도를 찾았나요?"
+  ]
+}

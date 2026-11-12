@@ -1,0 +1,277 @@
+{
+  "slug": "integer-range",
+  "title": "자료형 범위와 오버플로",
+  "category": "실전 팁",
+  "order": 2,
+  "summary": "int·long long 범위와 오버플로, 정수 나눗셈과 음수 나머지, 모듈러, 실수 오차",
+  "when": [
+    "합이나 곱이 약 2×10^9 를 넘을 수 있을 때",
+    "답을 10^9+7 같은 수로 나눈 나머지로 출력할 때",
+    "음수를 나누거나 나머지를 구할 때",
+    "올림 나눗셈이 필요할 때",
+    "실수(소수)를 비교하거나 제곱근을 정수로 쓸 때"
+  ],
+  "topics": [],
+  "python": {
+    "items": [
+      {
+        "name": "int",
+        "signature": "x = 10 ** 30",
+        "does": "크기 제한이 없는 정수예요. 오버플로가 없어요.",
+        "when": "큰 수 계산을 그대로 할 수 있어요. 다만 자릿수가 커지면 느려져요.",
+        "complexity": "작은 수 O(1), 큰 수는 자릿수에 따라 늘어나요"
+      },
+      {
+        "name": "// (정수 나눗셈)",
+        "signature": "a // b",
+        "does": "몫을 내림(−∞ 쪽)으로 구해요. -7 // 2 는 -4 예요.",
+        "when": "정수 몫이 필요할 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "% (나머지)",
+        "signature": "a % b",
+        "does": "결과의 부호가 b 를 따라요. -7 % 2 는 1 이에요.",
+        "when": "모듈러 연산, 홀짝 판정에 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "divmod",
+        "signature": "q, r = divmod(a, b)",
+        "does": "몫(//)과 나머지(%)를 한 번에 돌려줘요.",
+        "when": "둘 다 필요할 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "pow (모듈러 거듭제곱)",
+        "signature": "pow(a, b, m)",
+        "does": "a^b mod m 을 빠르게 구해요. pow(a, -1, m) 은 모듈러 역원이에요(3.8 이상, a 와 m 이 서로소일 때).",
+        "when": "큰 지수의 거듭제곱 나머지에 써요.",
+        "complexity": "O(log b)"
+      },
+      {
+        "name": "올림 나눗셈",
+        "signature": "-(-a // b)\n(a + b - 1) // b  # a ≥ 0, b > 0",
+        "does": "실수를 거치지 않고 몫을 올려요.",
+        "when": "상자 개수처럼 나머지가 있으면 하나 더 필요할 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "math.isqrt",
+        "signature": "math.isqrt(n)",
+        "does": "√n 이하의 가장 큰 정수를 정확히 구해요.",
+        "when": "큰 정수의 제곱근을 정수로 쓸 때 써요.",
+        "complexity": "자릿수에 따라 늘어나요(작은 수는 O(1))"
+      },
+      {
+        "name": "실수 비교",
+        "signature": "abs(a - b) < 1e-9\nfrom fractions import Fraction",
+        "does": "float 는 근삿값이라 오차 범위로 비교하거나 분수로 정확히 계산해요.",
+        "when": "소수 계산 결과를 비교할 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "int ↔ str 자릿수 제한",
+        "signature": "sys.set_int_max_str_digits(0)",
+        "does": "3.11 이상에서 4300 자리가 넘는 int 를 str 로 바꾸면 ValueError 가 나요. 0 을 넣으면 제한을 풀어요.",
+        "when": "아주 큰 수를 출력할 때 써요.",
+        "complexity": "O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "정수 나눗셈과 음수 나머지",
+        "code": "for a, b in [(7, 2), (-7, 2), (7, -2), (-7, -2)]:\n    print(a, b, a // b, a % b, int(a / b))\n",
+        "stdin": "",
+        "output": "7 2 3 1 3\n-7 2 -4 1 -3\n7 -2 -4 -1 -3\n-7 -2 3 -1 3\n"
+      },
+      {
+        "title": "올림 나눗셈과 모듈러 거듭제곱",
+        "code": "MOD = 10**9 + 7\na, b = 17, 5\nprint(-(-a // b), (a + b - 1) // b)\nx = 1\nfor _ in range(100):\n    x = x * 3 % MOD\nprint(x, pow(3, 100, MOD))\nprint(2**63 - 1, 2**64)\nprint(pow(3, -1, 7))\n",
+        "stdin": "",
+        "output": "4 4\n886041711 886041711\n9223372036854775807 18446744073709551616\n5\n"
+      },
+      {
+        "title": "실수 오차와 정확한 계산",
+        "code": "import math\nfrom fractions import Fraction\n\nprint(0.1 + 0.2 == 0.3)\nprint(abs(0.1 + 0.2 - 0.3) < 1e-9)\nprint(Fraction(1, 10) + Fraction(2, 10) == Fraction(3, 10))\nn = 999999999999999999\nprint(int(math.sqrt(n)), math.isqrt(n))\nbig = 10**18 + 3\nprint(int(big / 1), big // 1)\n",
+        "stdin": "",
+        "output": "False\nTrue\nTrue\n1000000000 999999999\n1000000000000000000 1000000000000000003\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "q = -7 // 2  # -3 을 기대",
+        "right": "q = abs(a) // abs(b) * (1 if (a < 0) == (b < 0) else -1)",
+        "why": "Python // 은 내림이라 -4 예요. C++ 처럼 0 쪽으로 버리려면 부호를 따로 처리해요."
+      },
+      {
+        "wrong": "q = int(a / b)  # a 가 10^17 이상",
+        "right": "q = a // b",
+        "why": "/ 는 float 로 계산해서 큰 수에서 오차가 나요(int((10**18 + 3) / 1) 이 10^18 이 돼요)."
+      },
+      {
+        "wrong": "r = int(math.sqrt(n))  # n 이 10^15 이상",
+        "right": "r = math.isqrt(n)",
+        "why": "float 제곱근은 반올림 오차가 있어요(n = 999999999999999999 에서 10^9 가 나와요)."
+      },
+      {
+        "wrong": "if 0.1 + 0.2 == 0.3:",
+        "right": "if abs(x - y) < 1e-9:\n# 또는 정수·Fraction 으로 계산",
+        "why": "float 는 근삿값이라 == 가 False 예요."
+      },
+      {
+        "wrong": "print(10 ** 5000)  # 3.11 이상",
+        "right": "import sys\nsys.set_int_max_str_digits(0)\nprint(10 ** 5000)",
+        "why": "4300 자리가 넘는 int 를 문자열로 바꾸면 ValueError 가 나요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "int",
+        "signature": "int x;",
+        "does": "−2,147,483,648 ~ 2,147,483,647 (약 ±2.1×10^9) 이에요.",
+        "when": "값과 중간 계산이 2×10^9 를 넘지 않을 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "long long",
+        "signature": "long long x;",
+        "does": "약 ±9.2×10^18 (2^63 − 1 = 9,223,372,036,854,775,807) 이에요.",
+        "when": "합·곱이 int 를 넘을 수 있으면 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "1LL 곱하기",
+        "signature": "long long p = 1LL * a * b;",
+        "does": "곱하기 전에 long long 으로 바꿔 int 끼리의 오버플로를 막아요.",
+        "when": "int 두 개를 곱할 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "/ 와 %",
+        "signature": "a / b, a % b",
+        "does": "몫은 0 쪽으로 버려요(-7 / 2 는 -3). 나머지 부호는 a 를 따라요(-7 % 2 는 -1).",
+        "when": "음수가 나오는 나눗셈에서 조심해요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "음수 나머지 보정",
+        "signature": "((a % m) + m) % m",
+        "does": "나머지를 항상 0 ~ m−1 로 맞춰요.",
+        "when": "모듈러 뺄셈, 음수 인덱스 순환에 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "올림 나눗셈",
+        "signature": "(a + b - 1) / b  // a ≥ 0, b > 0",
+        "does": "실수를 거치지 않고 몫을 올려요.",
+        "when": "나머지가 있으면 하나 더 필요할 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "한계값 상수",
+        "signature": "INT_MAX, LLONG_MAX\nnumeric_limits<long long>::max()",
+        "does": "자료형의 최댓값을 줘요. INF 로 쓸 땐 더해도 넘치지 않게 여유를 둬요.",
+        "when": "최솟값 초기화, 무한대 표시에 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "__int128",
+        "signature": "__int128 p = (__int128)a * b;",
+        "does": "GCC 확장 128비트 정수예요. cout 으로 바로 출력할 수 없어요.",
+        "when": "long long 두 개의 곱을 정확히 다룰 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "double 과 pow / sqrt",
+        "signature": "pow(x, y), sqrt(x)",
+        "does": "double 로 계산해요. 2^53 을 넘는 정수는 정확히 나타내지 못해요.",
+        "when": "정수 결과가 필요하면 정수 반복 곱셈이나 보정을 해요.",
+        "complexity": "O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "정수 나눗셈과 음수 나머지",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nlong long floor_div(long long a, long long b) {\n    long long q = a / b;\n    if ((a % b != 0) && ((a < 0) != (b < 0))) q--;\n    return q;\n}\n\nint main() {\n    int pairs[4][2] = {{7, 2}, {-7, 2}, {7, -2}, {-7, -2}};\n    for (auto &p : pairs) {\n        int a = p[0], b = p[1];\n        cout << a << ' ' << b << ' ' << a / b << ' ' << a % b << ' ' << floor_div(a, b) << '\\n';\n    }\n    int m = 5;\n    cout << (-3 % m) << ' ' << ((-3 % m) + m) % m << '\\n';\n    return 0;\n}\n",
+        "stdin": "",
+        "output": "7 2 3 1 3\n-7 2 -3 -1 -4\n7 -2 -3 1 -4\n-7 -2 3 -1 3\n-3 2\n"
+      },
+      {
+        "title": "범위와 long long, 모듈러 거듭제곱",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nconst long long MOD = 1000000007LL;\n\nlong long power(long long a, long long e, long long m) {\n    long long r = 1;\n    a %= m;\n    while (e > 0) {\n        if (e & 1) r = r * a % m;\n        a = a * a % m;\n        e >>= 1;\n    }\n    return r;\n}\n\nint main() {\n    cout << INT_MAX << ' ' << LLONG_MAX << '\\n';\n    int a = 100000, b = 100000;\n    long long p = 1LL * a * b;\n    cout << p << '\\n';\n    cout << (int)p << '\\n';  // int 로 바꾸면 잘려요\n    long long x = 1;\n    for (int i = 0; i < 100; i++) x = x * 3 % MOD;\n    cout << x << ' ' << power(3, 100, MOD) << '\\n';\n    cout << (17 + 5 - 1) / 5 << '\\n';\n    return 0;\n}\n",
+        "stdin": "",
+        "output": "2147483647 9223372036854775807\n10000000000\n1410065408\n886041711 886041711\n4\n"
+      },
+      {
+        "title": "double 오차와 정수 보정",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nlong long isqrt(long long n) {\n    long long r = (long long)sqrt((double)n);\n    while (r * r > n) r--;\n    while ((r + 1) * (r + 1) <= n) r++;\n    return r;\n}\n\nint main() {\n    cout << boolalpha << (0.1 + 0.2 == 0.3) << '\\n';\n    cout << (fabs(0.1 + 0.2 - 0.3) < 1e-9) << '\\n';\n    long long n = 999999999999999999LL;\n    cout << (long long)sqrt((double)n) << ' ' << isqrt(n) << '\\n';\n    long long viaPow = (long long)pow(3, 38);\n    long long exact = 1;\n    for (int i = 0; i < 38; i++) exact *= 3;\n    cout << viaPow << ' ' << exact << '\\n';\n    return 0;\n}\n",
+        "stdin": "",
+        "output": "false\ntrue\n1000000000 999999999\n1350851717672992000 1350851717672992089\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "int a, b;  // 각각 10^5\nlong long p = a * b;",
+        "right": "long long p = 1LL * a * b;",
+        "why": "int 끼리 먼저 곱해서 이미 오버플로(정의되지 않은 동작)가 난 뒤에 long long 에 담겨요."
+      },
+      {
+        "wrong": "int sum = 0;  // N = 2×10^5, 값 ≤ 10^9",
+        "right": "long long sum = 0;",
+        "why": "합이 2×10^14 까지 커져 int 범위를 넘어요."
+      },
+      {
+        "wrong": "if (x % 2 == 1)  // x 가 음수일 수 있으면",
+        "right": "if (x % 2 != 0)",
+        "why": "C++ 에서 -3 % 2 는 -1 이라 음수 홀수를 놓쳐요."
+      },
+      {
+        "wrong": "(a - b) % MOD",
+        "right": "((a - b) % MOD + MOD) % MOD",
+        "why": "a < b 이면 음수 나머지가 나와요."
+      },
+      {
+        "wrong": "long long x = pow(3, 38);",
+        "right": "long long x = 1;\nfor (int i = 0; i < 38; i++) x *= 3;",
+        "why": "pow 는 double 이라 2^53 을 넘으면 끝자리가 틀려요(1350851717672992000 vs 1350851717672992089)."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "합·곱이 2×10^9 를 넘을 수 있어요",
+      "use": "C++ long long (곱은 1LL *), Python 은 그대로"
+    },
+    {
+      "situation": "곱이 9.2×10^18 을 넘을 수 있어요",
+      "use": "C++ __int128 이나 모듈러로 줄이기, Python int"
+    },
+    {
+      "situation": "답을 MOD 로 나눈 나머지로 내요",
+      "use": "더하고 곱할 때마다 % MOD, 뺄셈 뒤엔 + MOD 후 % MOD"
+    },
+    {
+      "situation": "음수를 나누거나 나머지를 구해요",
+      "use": "Python // % 는 내림, C++ / % 는 0 쪽 — 원하는 쪽으로 보정"
+    },
+    {
+      "situation": "소수 결과를 비교해요",
+      "use": "가능하면 정수 식으로 바꾸고(교차 곱 등), 아니면 eps(1e-9) 비교"
+    },
+    {
+      "situation": "큰 수의 정수 제곱근이 필요해요",
+      "use": "Python math.isqrt, C++ sqrt 뒤 ±1 보정"
+    }
+  ],
+  "checklist": [
+    "입력 최댓값으로 합·곱의 최댓값을 계산해 봤나요?",
+    "C++ 에서 int 끼리 곱하는 곳에 1LL 을 붙였나요?",
+    "누적 합, 거리, 개수 변수가 long long 인가요?",
+    "모듈러 답이면 모든 덧셈·곱셈 뒤에 % MOD 를 했나요? 뺄셈 뒤 음수 보정은요?",
+    "음수 나눗셈·나머지의 언어별 규칙을 확인했나요?",
+    "실수 대신 정수로 계산할 수 있는지 먼저 봤나요?"
+  ]
+}

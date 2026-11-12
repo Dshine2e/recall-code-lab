@@ -1,0 +1,293 @@
+{
+  "slug": "list-vector",
+  "title": "리스트와 벡터",
+  "category": "자료구조",
+  "order": 1,
+  "summary": "리스트·벡터 만들기, 추가·삭제, 슬라이스·뒤집기, 2차원 배열과 복사 주의점",
+  "when": [
+    "값을 순서대로 저장하고 인덱스로 꺼낼 때",
+    "개수를 모른 채 끝에 계속 추가할 때",
+    "격자(2차원 배열)를 다룰 때",
+    "최댓값과 그 위치를 찾을 때",
+    "구간을 뒤집거나 잘라 낼 때"
+  ],
+  "topics": [
+    "배열 순회",
+    "배열 시뮬레이션",
+    "2차원 배열",
+    "=인덱싱",
+    "최댓값과 위치"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "만들기",
+        "signature": "[0] * n\n[[0] * m for _ in range(n)]",
+        "does": "길이 n 의 1차원 리스트, n×m 2차원 리스트를 만들어요.",
+        "when": "크기를 미리 알 때 써요.",
+        "complexity": "O(N·M)"
+      },
+      {
+        "name": "append / extend",
+        "signature": "a.append(x), a.extend(it)",
+        "does": "append 는 원소 하나를, extend 는 여러 원소를 끝에 붙여요.",
+        "when": "끝에 계속 추가할 때 써요.",
+        "complexity": "append 상각 O(1), extend O(K)"
+      },
+      {
+        "name": "pop",
+        "signature": "a.pop(), a.pop(i)",
+        "does": "끝(또는 i번째) 원소를 빼서 돌려줘요.",
+        "when": "끝에서 빼는 스택 용도로 써요.",
+        "complexity": "끝 O(1), 중간·앞 O(N)"
+      },
+      {
+        "name": "insert / remove",
+        "signature": "a.insert(i, x), a.remove(x)",
+        "does": "i 위치에 끼워 넣거나, 처음 나오는 x 를 지워요.",
+        "when": "가끔 한두 번만 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "슬라이스·뒤집기",
+        "signature": "a[l:r], a[::-1], a.reverse()",
+        "does": "[l, r) 구간 복사본, 뒤집은 복사본을 만들어요. reverse() 는 제자리에서 뒤집어요.",
+        "when": "부분 구간을 다루거나 뒤집을 때 써요.",
+        "complexity": "O(r-l), O(N)"
+      },
+      {
+        "name": "len / sum / max / min",
+        "signature": "len(a), sum(a), max(a), min(a)",
+        "does": "길이, 합, 최댓값, 최솟값을 구해요.",
+        "when": "한 번에 집계할 때 써요.",
+        "complexity": "len O(1), 나머지 O(N)"
+      },
+      {
+        "name": "index / in",
+        "signature": "a.index(x), x in a",
+        "does": "x 가 처음 나오는 위치(없으면 ValueError), 포함 여부를 알려 줘요.",
+        "when": "작은 리스트에서 한 번 찾을 때 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "sort / sorted",
+        "signature": "a.sort(), sorted(a)",
+        "does": "sort() 는 제자리 정렬하고 None 을 돌려줘요. sorted() 는 정렬된 새 리스트를 돌려줘요.",
+        "when": "원본이 필요 없으면 sort(), 원본을 지켜야 하면 sorted() 를 써요.",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "enumerate",
+        "signature": "for i, x in enumerate(a):",
+        "does": "인덱스와 값을 함께 돌아요.",
+        "when": "위치와 값이 둘 다 필요할 때 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "복사",
+        "signature": "a[:], a.copy(), [row[:] for row in g]",
+        "does": "얕은 복사본을 만들어요. 2차원은 행마다 복사해야 해요.",
+        "when": "원본을 지키면서 바꿀 때 써요.",
+        "complexity": "O(N)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "2차원 리스트 만들고 순회하기",
+        "code": "n, m = 3, 4\ng = [[0] * m for _ in range(n)]\nfor i in range(n):\n    for j in range(m):\n        g[i][j] = i * m + j\nfor row in g:\n    print(*row)\nprint(sum(map(sum, g)))\ncol = [g[i][1] for i in range(n)]\nprint(col)\n",
+        "stdin": "",
+        "output": "0 1 2 3\n4 5 6 7\n8 9 10 11\n66\n[1, 5, 9]\n"
+      },
+      {
+        "title": "최댓값과 위치, 구간 뒤집기",
+        "code": "a = list(map(int, input().split()))\nmx = max(a)\nprint(mx, a.index(mx))  # 처음 나오는 위치(0부터)\nlast = max(i for i, x in enumerate(a) if x == mx)\nprint(last)  # 마지막 위치\nl, r = 0, 3\na[l:r] = a[l:r][::-1]\nprint(a)\n",
+        "stdin": "5 9 2 9 1 7\n",
+        "output": "9 1\n3\n[2, 9, 5, 9, 1, 7]\n"
+      },
+      {
+        "title": "sort() 와 sorted(), 대입과 복사",
+        "code": "a = [3, 1, 2]\nb = sorted(a)\nprint(a, b)\nr = a.sort()\nprint(a, r)\nc = a\nd = a[:]\na.append(4)\nprint(c, d)\n",
+        "stdin": "",
+        "output": "[3, 1, 2] [1, 2, 3]\n[1, 2, 3] None\n[1, 2, 3, 4] [1, 2, 3]\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "g = [[0] * m] * n\ng[0][0] = 1  # 모든 행의 0번이 1",
+        "right": "g = [[0] * m for _ in range(n)]",
+        "why": "[...] * n 은 같은 행 하나를 n번 가리켜서 한 칸을 바꾸면 모든 행이 바뀌어요."
+      },
+      {
+        "wrong": "a = a.sort()  # a 가 None",
+        "right": "a.sort()\n# 또는 a = sorted(a)",
+        "why": "sort() 는 제자리에서 정렬하고 None 을 돌려줘요."
+      },
+      {
+        "wrong": "b = a  # 복사하려고",
+        "right": "b = a[:]\n# 2차원: b = [row[:] for row in a]",
+        "why": "대입은 같은 리스트를 가리킬 뿐이라 b 를 바꾸면 a 도 바뀌어요."
+      },
+      {
+        "wrong": "a.append(1, 2)",
+        "right": "a.append((1, 2))  # 튜플 하나\na.extend([1, 2])  # 원소 두 개",
+        "why": "append 는 인자를 정확히 하나만 받아서 TypeError 가 나요."
+      },
+      {
+        "wrong": "for x in a:\n    if x % 2:\n        a.remove(x)",
+        "right": "a = [x for x in a if x % 2 == 0]",
+        "why": "돌면서 지우면 원소를 건너뛰어요([1, 1, 2, 3] 이 [1, 2] 로 남아요)."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "만들기",
+        "signature": "vector<int> v(n, 0);\nvector<vector<int>> g(n, vector<int>(m));",
+        "does": "길이 n 의 벡터, n×m 2차원 벡터를 만들어요. 값은 0 으로 채워져요.",
+        "when": "크기를 미리 알 때 써요.",
+        "complexity": "O(N·M)"
+      },
+      {
+        "name": "push_back / emplace_back",
+        "signature": "v.push_back(x);",
+        "does": "끝에 원소를 붙여요.",
+        "when": "개수를 모른 채 계속 추가할 때 써요.",
+        "complexity": "상각 O(1)"
+      },
+      {
+        "name": "pop_back / back",
+        "signature": "v.back(); v.pop_back();",
+        "does": "마지막 원소를 보거나 지워요. 빈 벡터에서 쓰면 정의되지 않은 동작이에요.",
+        "when": "스택처럼 쓸 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "insert / erase",
+        "signature": "v.insert(v.begin() + i, x);\nv.erase(v.begin() + i);",
+        "does": "i 위치에 끼워 넣거나 지워요. 뒤 원소를 모두 옮겨요.",
+        "when": "가끔 한두 번만 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "size",
+        "signature": "v.size()",
+        "does": "원소 개수를 부호 없는 size_t 로 돌려줘요.",
+        "when": "반복 범위를 정할 때 (int)v.size() 로 바꿔 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "at",
+        "signature": "v.at(i)",
+        "does": "범위를 검사하고 i번째 원소를 돌려줘요. 범위 밖이면 예외가 나요.",
+        "when": "인덱스 실수를 찾고 싶을 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "sort",
+        "signature": "sort(v.begin(), v.end());",
+        "does": "오름차순으로 제자리 정렬해요. 내림차순은 greater<int>() 를 넘겨요.",
+        "when": "정렬이 필요할 때 써요.",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "reverse",
+        "signature": "reverse(v.begin() + l, v.begin() + r);",
+        "does": "[l, r) 구간을 제자리에서 뒤집어요.",
+        "when": "구간 뒤집기에 써요.",
+        "complexity": "O(r-l)"
+      },
+      {
+        "name": "max_element / min_element",
+        "signature": "max_element(v.begin(), v.end()) - v.begin()",
+        "does": "최댓값을 가리키는 반복자를 돌려줘요. 같은 값이 여러 개면 처음 것이에요. begin() 을 빼면 인덱스예요.",
+        "when": "최댓값과 위치를 함께 구할 때 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "accumulate",
+        "signature": "accumulate(v.begin(), v.end(), 0LL)",
+        "does": "합을 구해요. 초깃값의 타입으로 더하니 큰 합은 0LL 을 넘겨요.",
+        "when": "합계를 구할 때 써요.",
+        "complexity": "O(N)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "2차원 벡터 만들고 순회하기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n = 3, m = 4;\n    vector<vector<int>> g(n, vector<int>(m));\n    for (int i = 0; i < n; i++)\n        for (int j = 0; j < m; j++) g[i][j] = i * m + j;\n    long long total = 0;\n    for (const auto &row : g) {\n        for (int j = 0; j < m; j++) cout << row[j] << (j + 1 < m ? ' ' : '\\n');\n        total += accumulate(row.begin(), row.end(), 0LL);\n    }\n    cout << total << '\\n';\n    for (int i = 0; i < n; i++) cout << g[i][1] << (i + 1 < n ? ' ' : '\\n');\n    return 0;\n}\n",
+        "stdin": "",
+        "output": "0 1 2 3\n4 5 6 7\n8 9 10 11\n66\n1 5 9\n"
+      },
+      {
+        "title": "최댓값과 위치, 구간 뒤집기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    vector<int> a;\n    int x;\n    while (cin >> x) a.push_back(x);\n    int idx = max_element(a.begin(), a.end()) - a.begin();\n    cout << a[idx] << ' ' << idx << '\\n';  // 처음 나오는 위치(0부터)\n    int last = -1;\n    for (int i = 0; i < (int)a.size(); i++)\n        if (a[i] == a[idx]) last = i;\n    cout << last << '\\n';  // 마지막 위치\n    reverse(a.begin() + 0, a.begin() + 3);\n    for (int i = 0; i < (int)a.size(); i++) cout << a[i] << (i + 1 < (int)a.size() ? ' ' : '\\n');\n    return 0;\n}\n",
+        "stdin": "5 9 2 9 1 7\n",
+        "output": "9 1\n3\n2 9 5 9 1 7\n"
+      },
+      {
+        "title": "벡터 대입은 복사, 참조는 &",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nvoid print(const vector<int> &v) {\n    for (int x : v) cout << x << ' ';\n    cout << '\\n';\n}\n\nint main() {\n    vector<int> a = {3, 1, 2};\n    vector<int> b = a;   // 전체 복사\n    vector<int> &r = a;  // 같은 벡터를 가리켜요\n    sort(b.begin(), b.end());\n    a.push_back(4);\n    print(a);\n    print(b);\n    print(r);\n    vector<int> c(5, 0), d{5, 0};\n    cout << c.size() << ' ' << d.size() << '\\n';\n    return 0;\n}\n",
+        "stdin": "",
+        "output": "3 1 2 4 \n1 2 3 \n3 1 2 4 \n5 2\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "for (int i = 0; i < v.size() - 1; i++)  // v 가 비어 있으면",
+        "right": "for (int i = 0; i + 1 < (int)v.size(); i++)",
+        "why": "size() 는 부호 없는 값이라 빈 벡터에서 size() - 1 이 18446744073709551615 가 돼요."
+      },
+      {
+        "wrong": "vector<int> v;\nv[0] = 5;",
+        "right": "vector<int> v(n);  // 또는 v.push_back(5);",
+        "why": "크기가 0 인 벡터의 [] 접근은 범위 밖이라 에러 없이 이상하게 동작할 수 있어요."
+      },
+      {
+        "wrong": "vector<int> v{5, 0};  // 길이 5 를 기대",
+        "right": "vector<int> v(5, 0);  // 0 이 5개",
+        "why": "중괄호는 원소 목록이라 {5, 0} 두 개짜리 벡터가 돼요."
+      },
+      {
+        "wrong": "int idx = max_element(v.begin(), v.end());",
+        "right": "int idx = max_element(v.begin(), v.end()) - v.begin();",
+        "why": "max_element 는 반복자를 돌려줘서 int 에 바로 넣으면 컴파일 에러예요."
+      },
+      {
+        "wrong": "void f(vector<int> v)  // 큰 벡터, 자주 호출",
+        "right": "void f(const vector<int> &v)\n// 고쳐야 하면 vector<int> &v",
+        "why": "값으로 넘기면 호출마다 전체를 복사해서 O(N) 이 들고, 함수 안에서 고친 내용도 밖에 남지 않아요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "끝에서만 넣고 빼요",
+      "use": "Python list append/pop, C++ vector push_back/pop_back"
+    },
+    {
+      "situation": "앞에서도 넣고 빼요",
+      "use": "list/vector 대신 deque (앞쪽 삽입·삭제가 O(1))"
+    },
+    {
+      "situation": "격자(2차원)를 만들어요",
+      "use": "Python [[0] * m for _ in range(n)], C++ vector<vector<int>>(n, vector<int>(m))"
+    },
+    {
+      "situation": "원본을 지키고 정렬해요",
+      "use": "Python sorted(a), C++ 복사본을 만든 뒤 sort"
+    },
+    {
+      "situation": "값이 있는지 자주 확인해요",
+      "use": "리스트 in(O(N)) 대신 set/unordered_set"
+    }
+  ],
+  "checklist": [
+    "Python 2차원 리스트를 [[0] * m] * n 으로 만들지 않았나요?",
+    "a = a.sort() 처럼 None 을 대입하지 않았나요?",
+    "C++ 에서 size() - 1 을 빈 벡터에 쓰지 않았나요?",
+    "인덱스가 0부터인지 1부터인지 입력과 맞췄나요?",
+    "반복문 안에서 pop(0)·insert·erase·remove 를 반복하지 않나요?",
+    "C++ 큰 벡터를 함수에 값으로 넘기지 않았나요?"
+  ]
+}

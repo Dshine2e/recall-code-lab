@@ -1,3 +1,60 @@
 {
-  "concepts": []
+  "concepts": [
+    {
+      "slug": "io-fast-input",
+      "title": "입출력과 빠른 입력",
+      "category": "기초 문법",
+      "summary": "input·sys.stdin, cin 설정으로 많은 입력을 빠르고 정확하게 읽고 한 번에 출력해요",
+      "topics": []
+    },
+    {
+      "slug": "string",
+      "title": "문자열",
+      "category": "기초 문법",
+      "summary": "문자열 자르기·찾기·나누기·뒤집기와 문자 코드(ord/chr, c - 'a') 다루기",
+      "topics": [
+        "문자열",
+        "회문",
+        "문자 빈도",
+        "시각 계산"
+      ]
+    },
+    {
+      "slug": "list-vector",
+      "title": "리스트와 벡터",
+      "category": "자료구조",
+      "summary": "리스트·벡터 만들기, 추가·삭제, 슬라이스·뒤집기, 2차원 배열과 복사 주의점",
+      "topics": [
+        "배열 순회",
+        "배열 시뮬레이션",
+        "2차원 배열",
+        "=인덱싱",
+        "최댓값과 위치"
+      ]
+    },
+    {
+      "slug": "complexity-guide",
+      "title": "시간 복잡도와 입력 크기 가이드",
+      "category": "실전 팁",
+      "summary": "입력 크기 N 을 보고 허용되는 시간 복잡도와 숨은 O(N) 연산을 가려내는 기준",
+      "topics": []
+    },
+    {
+      "slug": "integer-range",
+      "title": "자료형 범위와 오버플로",
+      "category": "실전 팁",
+      "summary": "int·long long 범위와 오버플로, 정수 나눗셈과 음수 나머지, 모듈러, 실수 오차",
+      "topics": []
+    },
+    {
+      "slug": "recursion-limit",
+      "title": "재귀 한도와 스택 깊이",
+      "category": "실전 팁",
+      "summary": "Python 재귀 한도(기본 1000)와 C++ 스택 크기, 깊은 재귀를 반복문으로 바꾸는 법",
+      "topics": [
+        "dfs",
+        "백트래킹"
+      ]
+    }
+  ]
 }

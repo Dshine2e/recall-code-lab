@@ -1,0 +1,297 @@
+{
+  "slug": "string",
+  "title": "문자열",
+  "category": "기초 문법",
+  "order": 2,
+  "summary": "문자열 자르기·찾기·나누기·뒤집기와 문자 코드(ord/chr, c - 'a') 다루기",
+  "when": [
+    "문자열을 뒤집거나 회문인지 확인할 때",
+    "알파벳·숫자별 빈도를 셀 때",
+    "구분자(공백, ':', '-')로 나눠 파싱할 때",
+    "대소문자를 바꾸거나 문자 종류(숫자/알파벳)를 확인할 때",
+    "연속된 같은 문자를 묶어서 셀 때",
+    "문자와 숫자 사이를 바꿀 때"
+  ],
+  "topics": [
+    "문자열",
+    "회문",
+    "문자 빈도",
+    "시각 계산"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "인덱싱·슬라이싱",
+        "signature": "s[i], s[a:b], s[::-1]",
+        "does": "i번째 문자, [a, b) 구간, 뒤집은 문자열을 얻어요. 음수 인덱스는 뒤에서부터 세요.",
+        "when": "부분 문자열이나 뒤집기가 필요할 때 써요.",
+        "complexity": "s[i] O(1), 슬라이스 O(b-a)"
+      },
+      {
+        "name": "split",
+        "signature": "s.split(sep=None)",
+        "does": "sep 이 없으면 연속 공백을 하나로 보고 나눠요. sep 을 주면 그 문자열 기준으로 정확히 나눠요.",
+        "when": "단어나 'HH:MM' 같은 형식을 나눌 때 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "join",
+        "signature": "sep.join(iterable)",
+        "does": "문자열들을 sep 으로 이어 붙여요. 요소는 모두 문자열이어야 해요.",
+        "when": "여러 조각을 한 문자열로 만들 때 써요.",
+        "complexity": "O(전체 길이)"
+      },
+      {
+        "name": "find / count / in",
+        "signature": "s.find(t), s.count(t), t in s",
+        "does": "find 는 처음 위치(없으면 -1), count 는 겹치지 않는 등장 횟수, in 은 포함 여부예요.",
+        "when": "부분 문자열을 찾을 때 써요.",
+        "complexity": "최악 O(N·M)"
+      },
+      {
+        "name": "replace",
+        "signature": "s.replace(old, new)",
+        "does": "old 를 모두 new 로 바꾼 새 문자열을 돌려줘요.",
+        "when": "특정 문자나 패턴을 한꺼번에 바꿀 때 써요.",
+        "complexity": "최악 O(N·M), 새 문자열 생성"
+      },
+      {
+        "name": "ord / chr",
+        "signature": "ord(c), chr(k)",
+        "does": "문자 ↔ 코드 값으로 바꿔요. ord(c) - ord('a') 로 알파벳 번호(0~25)를 얻어요.",
+        "when": "알파벳 26칸 배열이나 문자 이동(암호)에 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "대소문자·문자 종류",
+        "signature": "s.upper(), s.lower(), c.isdigit(), c.isalpha()",
+        "does": "대소문자를 바꾼 새 문자열을 만들거나 문자 종류를 확인해요.",
+        "when": "대소문자 무시 비교나 문자 분류에 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "strip",
+        "signature": "s.strip(), s.rstrip()",
+        "does": "양쪽(또는 오른쪽) 공백·줄바꿈을 지운 새 문자열을 돌려줘요.",
+        "when": "readline 으로 읽은 줄 끝의 '\\n' 을 지울 때 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "list 로 바꿔 고치기",
+        "signature": "chars = list(s); ...; ''.join(chars)",
+        "does": "문자열은 고칠 수 없어서(불변) 리스트로 바꿔 고친 뒤 다시 합쳐요.",
+        "when": "여러 위치의 문자를 바꿔야 할 때 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "Counter",
+        "signature": "from collections import Counter\nCounter(s)",
+        "does": "문자별 개수를 dict 처럼 세어 줘요. 없는 키는 0이에요.",
+        "when": "알파벳이 아닌 문자까지 빈도를 셀 때 써요.",
+        "complexity": "O(N)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "뒤집기·회문·슬라이싱",
+        "code": "s = input()\nprint(s[::-1])\nprint(s == s[::-1])\nprint(s[1:4], s[-2:])\nprint(s.upper(), s.count(\"e\"), s.find(\"v\"), s.find(\"z\"))\n",
+        "stdin": "level\n",
+        "output": "level\nTrue\neve el\nLEVEL 2 2 -1\n"
+      },
+      {
+        "title": "알파벳 빈도를 26칸 배열로 세기",
+        "code": "s = input()\ncnt = [0] * 26\nfor ch in s:\n    cnt[ord(ch) - ord('a')] += 1\nfor i in range(26):\n    if cnt[i]:\n        print(chr(ord('a') + i), cnt[i])\n",
+        "stdin": "banana\n",
+        "output": "a 3\nb 1\nn 2\n"
+      },
+      {
+        "title": "구분자로 나누고 다시 합치기",
+        "code": "y, m, d = map(int, input().split(\"-\"))\nprint(y, m, d)\nwords = input().split()\nprint(len(words))\nprint(\"-\".join(w.upper() for w in words))\nprint(\" \".join(reversed(words)))\n",
+        "stdin": "2026-03-09\nthe  quick fox\n",
+        "output": "2026 3 9\n3\nTHE-QUICK-FOX\nfox quick the\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "s[0] = 'A'",
+        "right": "s = 'A' + s[1:]\n# 여러 곳을 고치면 list(s) 로 바꿔 고친 뒤 ''.join",
+        "why": "str 은 불변이라 TypeError 가 나요."
+      },
+      {
+        "wrong": "res = \"\"\nfor ch in s:\n    res += ch  # N 이 아주 클 때",
+        "right": "parts = []\nfor ch in s:\n    parts.append(ch)\nres = \"\".join(parts)",
+        "why": "+= 는 새 문자열을 만들 수 있어서 최악 O(N^2) 이에요. 모아서 join 하면 O(N) 이에요."
+      },
+      {
+        "wrong": "\"a  b\".split(\" \")  # ['a', '', 'b']",
+        "right": "\"a  b\".split()  # ['a', 'b']",
+        "why": "split(\" \") 은 공백 하나하나로 나눠서 빈 문자열이 생겨요."
+      },
+      {
+        "wrong": "if s.find(t):",
+        "right": "if t in s:\n# 또는 if s.find(t) != -1:",
+        "why": "맨 앞에서 찾으면 0 이라 거짓, 못 찾으면 -1 이라 참이 돼요."
+      },
+      {
+        "wrong": "t = sorted(s)  # ['a', 'b', 'c']",
+        "right": "t = \"\".join(sorted(s))",
+        "why": "sorted 는 문자열이 아니라 문자 리스트를 돌려줘요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "인덱싱·길이",
+        "signature": "s[i], s.size()",
+        "does": "i번째 문자(char)와 길이를 얻어요. size() 는 부호 없는 size_t 예요.",
+        "when": "문자를 하나씩 볼 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "substr",
+        "signature": "s.substr(pos, len)",
+        "does": "pos 부터 len 글자를 잘라 새 문자열을 만들어요. len 을 빼면 끝까지예요.",
+        "when": "부분 문자열이 필요할 때 써요.",
+        "complexity": "O(len)"
+      },
+      {
+        "name": "find",
+        "signature": "s.find(t, pos = 0)",
+        "does": "처음 등장 위치를 돌려주고, 없으면 string::npos 를 돌려줘요.",
+        "when": "부분 문자열을 찾을 때 써요.",
+        "complexity": "최악 O(N·M)"
+      },
+      {
+        "name": "reverse",
+        "signature": "reverse(s.begin(), s.end());",
+        "does": "문자열을 제자리에서 뒤집어요. 복사본은 string r(s.rbegin(), s.rend()) 로 만들어요.",
+        "when": "뒤집기·회문 확인에 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "+= / push_back",
+        "signature": "s += t; s.push_back(c);",
+        "does": "끝에 문자열이나 문자를 붙여요.",
+        "when": "문자열을 조금씩 쌓아 만들 때 써요.",
+        "complexity": "상각 O(len(t)), push_back 상각 O(1)"
+      },
+      {
+        "name": "문자 ↔ 숫자",
+        "signature": "c - '0', c - 'a', (char)('a' + k)",
+        "does": "숫자 문자를 정수로, 알파벳을 0~25 번호로 바꾸거나 되돌려요.",
+        "when": "자릿수 계산, 알파벳 26칸 배열에 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "to_string / stoi / stoll",
+        "signature": "to_string(x), stoi(s), stoll(s)",
+        "does": "정수 ↔ 문자열로 바꿔요. 범위를 넘으면 stoi 가 예외를 던지니 큰 수는 stoll 을 써요.",
+        "when": "숫자를 자릿수 단위로 보거나 파싱할 때 써요.",
+        "complexity": "O(자릿수)"
+      },
+      {
+        "name": "cctype",
+        "signature": "toupper(c), tolower(c), isdigit(c), isalpha(c)",
+        "does": "문자 하나의 대소문자를 바꾸거나 종류를 확인해요. toupper 는 int 를 돌려줘요.",
+        "when": "문자 분류·대소문자 무시 비교에 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "구분자로 나누기",
+        "signature": "istringstream iss(s);\nwhile (getline(iss, tok, ':')) { ... }",
+        "does": "지정한 문자를 구분자로 토큰을 하나씩 꺼내요.",
+        "when": "'2026-03-09' 같은 형식을 나눌 때 써요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "erase / insert",
+        "signature": "s.erase(pos, len); s.insert(pos, t);",
+        "does": "중간을 지우거나 끼워 넣어요. 뒤쪽 문자를 모두 옮겨요.",
+        "when": "가끔 한두 번 고칠 때만 써요.",
+        "complexity": "O(N)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "뒤집기·회문·substr",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string s;\n    cin >> s;\n    string r(s.rbegin(), s.rend());\n    cout << r << '\\n';\n    cout << (s == r ? \"true\" : \"false\") << '\\n';\n    cout << s.substr(1, 3) << ' ' << s.substr(s.size() - 2) << '\\n';\n    size_t p = s.find('z');\n    cout << s.find('v') << ' ' << (p == string::npos ? \"없음\" : \"있음\") << '\\n';\n    return 0;\n}\n",
+        "stdin": "level\n",
+        "output": "level\ntrue\neve el\n2 없음\n"
+      },
+      {
+        "title": "알파벳 빈도를 26칸 배열로 세기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string s;\n    cin >> s;\n    int cnt[26] = {0};\n    for (char c : s) cnt[c - 'a']++;\n    for (int i = 0; i < 26; i++)\n        if (cnt[i]) cout << (char)('a' + i) << ' ' << cnt[i] << '\\n';\n    return 0;\n}\n",
+        "stdin": "banana\n",
+        "output": "a 3\nb 1\nn 2\n"
+      },
+      {
+        "title": "구분자로 나누고 다시 합치기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    string date;\n    getline(cin, date);\n    istringstream iss(date);\n    string tok;\n    vector<int> parts;\n    while (getline(iss, tok, '-')) parts.push_back(stoi(tok));\n    cout << parts[0] << ' ' << parts[1] << ' ' << parts[2] << '\\n';\n\n    string line, w;\n    getline(cin, line);\n    istringstream ws(line);\n    vector<string> words;\n    while (ws >> w) words.push_back(w);\n    cout << words.size() << '\\n';\n    string joined;\n    for (size_t i = 0; i < words.size(); i++) {\n        string up = words[i];\n        for (char &c : up) c = (char)toupper(c);\n        if (i) joined += '-';\n        joined += up;\n    }\n    cout << joined << '\\n';\n    return 0;\n}\n",
+        "stdin": "2026-03-09\nthe  quick fox\n",
+        "output": "2026 3 9\n3\nTHE-QUICK-FOX\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "s.substr(l, r)  // l~r 구간이라고 생각",
+        "right": "s.substr(l, r - l)  // [l, r)",
+        "why": "두 번째 인자는 끝 위치가 아니라 길이예요."
+      },
+      {
+        "wrong": "if (s.find(t) >= 0)",
+        "right": "if (s.find(t) != string::npos)",
+        "why": "find 는 부호 없는 size_t 를 돌려줘서 항상 0 이상이에요. 못 찾아도 참이 돼요."
+      },
+      {
+        "wrong": "int d = s[i];  // '7' → 55",
+        "right": "int d = s[i] - '0';  // '7' → 7",
+        "why": "문자는 코드 값으로 바뀌어요('7' 은 55)."
+      },
+      {
+        "wrong": "cout << toupper(c);  // 'a' → 65",
+        "right": "cout << (char)toupper(c);  // 'a' → A",
+        "why": "toupper 는 int 를 돌려줘서 숫자가 출력돼요."
+      },
+      {
+        "wrong": "for (...) s = s + c;",
+        "right": "for (...) s += c;",
+        "why": "s + c 는 매번 새 문자열을 복사해서 전체 O(N^2) 이에요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "소문자 알파벳만 나오고 빈도를 세요",
+      "use": "길이 26 배열 + ord(c) - ord('a') / c - 'a'"
+    },
+    {
+      "situation": "아무 문자나 나오고 빈도를 세요",
+      "use": "Python Counter, C++ map<char,int> 또는 int cnt[256]"
+    },
+    {
+      "situation": "구분자로 나눠요",
+      "use": "Python split(sep), C++ getline(iss, tok, sep)"
+    },
+    {
+      "situation": "문자열을 여러 번 고쳐요",
+      "use": "Python list 로 바꿔 고친 뒤 join, C++ string 은 바로 s[i] = c"
+    },
+    {
+      "situation": "조각을 많이 이어 붙여요",
+      "use": "Python 리스트에 모아 join, C++ += (s = s + c 는 피해요)"
+    },
+    {
+      "situation": "회문인지 확인해요",
+      "use": "Python s == s[::-1], C++ 양쪽 끝에서 두 인덱스로 비교"
+    }
+  ],
+  "checklist": [
+    "C++ substr 의 두 번째 인자를 길이로 썼나요?",
+    "C++ find 결과를 string::npos 와 비교했나요?",
+    "Python split() 과 split(' ') 중 맞는 것을 썼나요?",
+    "숫자 문자를 정수로 바꿀 때 - '0' 을 했나요?",
+    "빈 문자열·길이 1 문자열에서도 인덱스가 범위 안인가요?",
+    "대소문자 구분 조건을 문제대로 처리했나요?"
+  ]
+}
