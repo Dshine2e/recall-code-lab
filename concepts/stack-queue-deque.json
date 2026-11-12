@@ -1,0 +1,246 @@
+{
+  "slug": "stack-queue-deque",
+  "title": "스택·큐·덱",
+  "category": "자료구조",
+  "order": 3,
+  "summary": "끝에서 넣고 빼요. 스택은 나중에 넣은 것부터, 큐는 먼저 넣은 것부터, 덱은 양쪽 다 O(1)이에요.",
+  "when": [
+    "가장 최근에 넣은 것부터 처리할 때(되돌리기, 괄호 짝, 중첩 구조): 스택",
+    "들어온 순서대로 처리하는 시뮬레이션, BFS: 큐",
+    "앞뒤 양쪽에서 넣고 빼거나 회전시킬 때: 덱",
+    "단조 스택으로 '오른쪽에서 처음 나오는 더 큰 값'을 O(N)에 구할 때",
+    "단조 덱으로 길이 K 윈도우의 최댓값·최솟값을 O(N)에 구할 때"
+  ],
+  "topics": [
+    "스택",
+    "큐 시뮬레이션",
+    "덱"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "리스트를 스택으로",
+        "signature": "st.append(x) / st.pop() / st[-1]",
+        "does": "맨 뒤에 넣고, 맨 뒤를 꺼내고, 맨 뒤를 봐요.",
+        "when": "스택이 필요할 때 항상(따로 import 없음)",
+        "complexity": "append·pop 상각 O(1), st[-1] O(1)"
+      },
+      {
+        "name": "collections.deque",
+        "signature": "from collections import deque; dq = deque(iterable)",
+        "does": "양쪽 끝 넣기·빼기가 O(1)인 큐예요.",
+        "when": "큐, BFS, 양쪽에서 넣고 뺄 때",
+        "complexity": "만들기 O(N)"
+      },
+      {
+        "name": "append / appendleft",
+        "signature": "dq.append(x) / dq.appendleft(x)",
+        "does": "오른쪽 끝 / 왼쪽 끝에 넣어요.",
+        "when": "큐에 넣기(append), 앞에 끼워 넣기(appendleft)",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "popleft / pop",
+        "signature": "dq.popleft() / dq.pop()",
+        "does": "왼쪽 끝 / 오른쪽 끝을 꺼내요. 비어 있으면 IndexError 예요.",
+        "when": "큐에서 꺼내기(popleft)",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "dq[0], dq[-1]",
+        "signature": "dq[0] / dq[-1]",
+        "does": "양 끝을 꺼내지 않고 봐요. 가운데 인덱스 접근은 느리고 슬라이싱은 안 돼요.",
+        "when": "맨 앞·맨 뒤 확인",
+        "complexity": "양 끝 O(1), 가운데 dq[i] O(N)"
+      },
+      {
+        "name": "rotate",
+        "signature": "dq.rotate(k)",
+        "does": "오른쪽으로 k칸 돌려요(k<0 이면 왼쪽).",
+        "when": "원형으로 도는 시뮬레이션",
+        "complexity": "O(|k|)"
+      },
+      {
+        "name": "deque(maxlen)",
+        "signature": "deque(maxlen=k)",
+        "does": "길이가 k를 넘으면 반대쪽 끝이 자동으로 빠져요.",
+        "when": "최근 k개만 기억할 때",
+        "complexity": "넣기 O(1)"
+      },
+      {
+        "name": "빈 상태 확인",
+        "signature": "if st: / while dq:",
+        "does": "비어 있으면 False 예요.",
+        "when": "꺼내기 전에 항상",
+        "complexity": "O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "스택: 입력과 되돌리기(undo)",
+        "code": "import sys\n\nst = []\nfor line in sys.stdin.read().splitlines():\n    cmd = line.split()\n    if cmd[0] == \"type\":\n        st.append(cmd[1])\n    elif cmd[0] == \"undo\" and st:\n        st.pop()\n    print(\"\".join(st) if st else \"(empty)\")\n",
+        "stdin": "type a\ntype b\nundo\ntype c\nundo\nundo\nundo\n",
+        "output": "a\nab\na\nac\na\n(empty)\n(empty)\n"
+      },
+      {
+        "title": "큐: 한 번에 2만큼씩 일하고 남으면 뒤로",
+        "code": "from collections import deque\n\nq = deque([(\"A\", 3), (\"B\", 5), (\"C\", 1)])\nt = 0\nwhile q:\n    name, left = q.popleft()\n    work = min(2, left)\n    t += work\n    if left - work > 0:\n        q.append((name, left - work))\n    else:\n        print(name, \"done at\", t)\n",
+        "output": "C done at 5\nA done at 6\nB done at 9\n"
+      },
+      {
+        "title": "덱: 양쪽 넣기, 회전, maxlen",
+        "code": "from collections import deque\n\ndq = deque([1, 2, 3])\ndq.appendleft(0)\ndq.append(4)\nprint(list(dq), dq[0], dq[-1])\ndq.rotate(2)\nprint(list(dq))\ndq.rotate(-1)\nprint(list(dq))\n\nrecent = deque(maxlen=3)\nfor x in [5, 6, 7, 8, 9]:\n    recent.append(x)\nprint(list(recent))\n",
+        "output": "[0, 1, 2, 3, 4] 0 4\n[3, 4, 0, 1, 2]\n[4, 0, 1, 2, 3]\n[7, 8, 9]\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "q = [1, 2, 3]\nx = q.pop(0)",
+        "right": "q = deque([1, 2, 3])\nx = q.popleft()",
+        "why": "리스트의 pop(0)은 뒤 원소를 모두 한 칸씩 당겨서 O(N)이에요. 큐로 쓰면 전체가 O(N²)이 돼요."
+      },
+      {
+        "wrong": "top = st.pop()   # st 가 비어 있을 수 있음",
+        "right": "if st:\n    top = st.pop()",
+        "why": "빈 리스트의 pop() 은 IndexError(pop from empty list), 빈 deque 의 popleft() 는 IndexError(pop from an empty deque)예요."
+      },
+      {
+        "wrong": "dq[1:3]",
+        "right": "list(dq)[1:3]  # 필요할 때만",
+        "why": "deque 는 슬라이싱을 지원하지 않아 TypeError 가 나요. 가운데 인덱스 접근도 O(N)이라 자주 하면 리스트가 맞아요."
+      },
+      {
+        "wrong": "from queue import Queue\nq = Queue()",
+        "right": "from collections import deque\nq = deque()",
+        "why": "queue.Queue 는 스레드용이라 잠금 비용이 있어 느려요. 코딩 테스트에서는 deque 를 써요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "stack",
+        "signature": "stack<T> st; st.push(x); st.top(); st.pop();",
+        "does": "맨 위에 넣고, 보고, 빼요. pop() 은 값을 돌려주지 않아요(void).",
+        "when": "스택",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "queue",
+        "signature": "queue<T> q; q.push(x); q.front(); q.back(); q.pop();",
+        "does": "뒤에 넣고 앞에서 빼요. 맨 앞은 front() 예요(top() 이 아님).",
+        "when": "큐, BFS",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "deque",
+        "signature": "deque<T> dq; push_front / push_back / pop_front / pop_back",
+        "does": "양쪽 끝에서 넣고 빼요.",
+        "when": "양쪽 조작, 단조 덱",
+        "complexity": "양 끝 O(1)"
+      },
+      {
+        "name": "deque 인덱스",
+        "signature": "dq[i] / dq.front() / dq.back()",
+        "does": "C++ deque 는 가운데 원소도 바로 읽을 수 있어요(Python deque 와 다름).",
+        "when": "덱 안의 임의 위치를 볼 때",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "vector 를 스택으로",
+        "signature": "v.push_back(x); v.back(); v.pop_back();",
+        "does": "stack 과 같지만 안쪽 원소도 볼 수 있어요.",
+        "when": "스택 내용 전체를 출력·순회해야 할 때",
+        "complexity": "push_back 상각 O(1), pop_back O(1)"
+      },
+      {
+        "name": "empty / size",
+        "signature": "st.empty() / q.size()",
+        "does": "비었는지, 몇 개인지 알려 줘요. size() 는 부호 없는 정수(size_t)예요.",
+        "when": "꺼내기 전 확인",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "빈 컨테이너 접근",
+        "signature": "st.top() / q.front() (비어 있을 때)",
+        "does": "정의되지 않은 동작이에요. 예외가 나지 않고 엉뚱한 값이나 크래시가 날 수 있어요.",
+        "when": "항상 empty() 로 먼저 확인",
+        "complexity": "-"
+      }
+    ],
+    "examples": [
+      {
+        "title": "스택: 입력과 되돌리기(undo)",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    vector<char> st;  // 내용 전체를 출력하려고 vector 를 스택으로 사용\n    string cmd;\n    while (cin >> cmd) {\n        if (cmd == \"type\") {\n            char c;\n            cin >> c;\n            st.push_back(c);\n        } else if (cmd == \"undo\" && !st.empty()) {\n            st.pop_back();\n        }\n        if (st.empty()) cout << \"(empty)\\n\";\n        else cout << string(st.begin(), st.end()) << '\\n';\n    }\n    return 0;\n}\n",
+        "stdin": "type a\ntype b\nundo\ntype c\nundo\nundo\nundo\n",
+        "output": "a\nab\na\nac\na\n(empty)\n(empty)\n"
+      },
+      {
+        "title": "큐: 한 번에 2만큼씩 일하고 남으면 뒤로",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    queue<pair<string, int>> q;\n    q.push({\"A\", 3});\n    q.push({\"B\", 5});\n    q.push({\"C\", 1});\n    int t = 0;\n    while (!q.empty()) {\n        auto [name, left] = q.front();\n        q.pop();\n        int work = min(2, left);\n        t += work;\n        if (left - work > 0) q.push({name, left - work});\n        else cout << name << \" done at \" << t << '\\n';\n    }\n    return 0;\n}\n",
+        "output": "C done at 5\nA done at 6\nB done at 9\n"
+      },
+      {
+        "title": "덱과 stack: 양쪽 넣기, top 후 pop",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    deque<int> dq = {1, 2, 3};\n    dq.push_front(0);\n    dq.push_back(4);\n    cout << dq.front() << ' ' << dq.back() << ' ' << dq[2] << '\\n';\n    dq.pop_front();\n    dq.pop_back();\n    for (int x : dq) cout << x << ' ';\n    cout << '\\n';\n\n    stack<int> st;\n    for (int x : {10, 20, 30}) st.push(x);\n    while (!st.empty()) {\n        int x = st.top();  // 먼저 읽고\n        st.pop();          // 그다음 뺀다\n        cout << x << ' ';\n    }\n    cout << '\\n';\n    return 0;\n}\n",
+        "output": "0 4 2\n1 2 3 \n30 20 10 \n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "int x = st.pop();",
+        "right": "int x = st.top();\nst.pop();",
+        "why": "stack·queue·priority_queue 의 pop() 은 void 라 컴파일 오류가 나요. 값은 top()/front() 로 먼저 읽어요."
+      },
+      {
+        "wrong": "int x = q.top();   // queue",
+        "right": "int x = q.front();",
+        "why": "queue 에는 top() 이 없어요(컴파일 오류). 맨 앞은 front(), 맨 뒤는 back() 이에요. top() 은 stack 과 priority_queue 에만 있어요."
+      },
+      {
+        "wrong": "while (st.top() < x) st.pop();",
+        "right": "while (!st.empty() && st.top() < x) st.pop();",
+        "why": "다 꺼내서 비었을 때 top() 을 부르면 정의되지 않은 동작이에요. 단조 스택에서 특히 자주 나요."
+      },
+      {
+        "wrong": "for (int i = 0; i < dq.size() - 1; i++)",
+        "right": "for (int i = 0; i + 1 < (int)dq.size(); i++)",
+        "why": "size() 는 부호 없는 정수라 비어 있으면 size() - 1 이 18446744073709551615 가 돼서 범위 밖을 읽어요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "가장 최근 것부터 처리(되돌리기, 짝 맞추기, 중첩)",
+      "use": "스택: Python 리스트 / C++ stack 또는 vector"
+    },
+    {
+      "situation": "들어온 순서대로 처리, BFS",
+      "use": "큐: Python deque(popleft) / C++ queue"
+    },
+    {
+      "situation": "앞뒤 양쪽에서 넣고 빼기, 회전",
+      "use": "덱: Python deque / C++ deque"
+    },
+    {
+      "situation": "각 원소의 '다음 큰 값·작은 값'",
+      "use": "단조 스택(스택을 늘 정렬된 상태로 유지)"
+    },
+    {
+      "situation": "길이 K 윈도우의 최댓값·최솟값",
+      "use": "인덱스를 담는 단조 덱"
+    },
+    {
+      "situation": "매번 가장 작은(큰) 값을 꺼내야 함",
+      "use": "스택·큐가 아니라 힙(우선순위 큐)"
+    }
+  ],
+  "checklist": [
+    "꺼내기 전에 비었는지 확인했는지(Python IndexError, C++ 정의되지 않은 동작)",
+    "Python 에서 큐를 list.pop(0) 이 아니라 deque.popleft() 로 하는지",
+    "C++ pop() 은 void: top()/front() 로 먼저 읽었는지",
+    "queue 는 front(), stack·priority_queue 는 top()",
+    "단조 스택·덱에 값이 아니라 인덱스를 넣어야 하는지(위치·거리 계산)",
+    "size() - 1 같은 부호 없는 뺄셈을 피했는지"
+  ]
+}

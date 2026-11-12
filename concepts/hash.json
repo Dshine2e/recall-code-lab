@@ -1,0 +1,268 @@
+{
+  "slug": "hash",
+  "title": "해시(dict/set, map/set)",
+  "category": "자료구조",
+  "order": 2,
+  "summary": "값으로 바로 찾고, 세고, 묶어요. 조회·삽입·삭제가 평균 O(1)이에요.",
+  "when": [
+    "어떤 값이 이미 나왔는지 빠르게 확인할 때",
+    "값마다 몇 번 나왔는지 셀 때(빈도·카운팅)",
+    "값 → 위치(첫 등장 인덱스 등)를 기억해 둘 때",
+    "같은 키를 가진 것끼리 묶을 때(그룹화)",
+    "두 모음의 교집합·합집합·차집합을 구할 때"
+  ],
+  "topics": [
+    "해시",
+    "딕셔너리 카운팅",
+    "문자 빈도 세기"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "dict 조회·대입",
+        "signature": "d[k] = v / d[k] / k in d",
+        "does": "키로 값을 넣고 읽어요. 없는 키를 d[k] 로 읽으면 KeyError 가 나요.",
+        "when": "값 → 정보(개수, 위치, 이름)를 저장할 때",
+        "complexity": "평균 O(1), 최악 O(N)"
+      },
+      {
+        "name": "dict.get",
+        "signature": "d.get(k, default=None)",
+        "does": "키가 없으면 default 를 돌려줘요. 사전에 아무것도 추가하지 않아요.",
+        "when": "없을 수도 있는 키를 안전하게 읽을 때",
+        "complexity": "평균 O(1)"
+      },
+      {
+        "name": "collections.Counter",
+        "signature": "Counter(iterable)",
+        "does": "원소마다 개수를 세는 dict 예요. 없는 키를 읽으면 0 이에요.",
+        "when": "빈도 세기, 가장 많이 나온 값 찾기",
+        "complexity": "만들기 O(N), most_common() O(N log N)"
+      },
+      {
+        "name": "Counter.most_common",
+        "signature": "c.most_common(k)",
+        "does": "개수가 많은 순으로 (값, 개수) 를 k개 돌려줘요. 개수가 같으면 처음 센 순서예요.",
+        "when": "상위 몇 개만 볼 때(동점 기준이 따로 있으면 직접 정렬)",
+        "complexity": "O(N log k)"
+      },
+      {
+        "name": "collections.defaultdict",
+        "signature": "defaultdict(list) / defaultdict(int)",
+        "does": "없는 키를 처음 읽을 때 기본값(빈 리스트, 0)을 만들어 넣어요.",
+        "when": "키별로 리스트에 모으기(그룹화), 누적하기",
+        "complexity": "평균 O(1)"
+      },
+      {
+        "name": "set",
+        "signature": "s = set(); s.add(x); x in s; s.discard(x)",
+        "does": "중복 없는 모음이에요. remove 는 없는 값이면 KeyError, discard 는 조용히 넘어가요.",
+        "when": "방문 여부, 중복 제거, 존재 확인",
+        "complexity": "평균 O(1)"
+      },
+      {
+        "name": "집합 연산",
+        "signature": "a & b, a | b, a - b, a ^ b",
+        "does": "교집합, 합집합, 차집합, 대칭차집합을 새 set 으로 만들어요.",
+        "when": "두 모음에서 공통·한쪽에만 있는 값을 찾을 때",
+        "complexity": "&: O(min(|A|,|B|)), |: O(|A|+|B|), -: O(|A|)"
+      },
+      {
+        "name": "튜플 키",
+        "signature": "d[(x, y)] = v",
+        "does": "튜플은 해시할 수 있어 키가 돼요. 리스트는 키가 될 수 없어요.",
+        "when": "좌표나 (이름, 날짜) 같은 묶음을 키로 쓸 때",
+        "complexity": "평균 O(튜플 길이)"
+      },
+      {
+        "name": "순회",
+        "signature": "for k, v in d.items():",
+        "does": "넣은 순서대로 돌아요(Python 3.7+). 정렬 순서가 아니에요.",
+        "when": "모든 키·값을 처리할 때(정렬이 필요하면 sorted(d))",
+        "complexity": "O(N)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "단어 빈도: 많이 나온 순, 같으면 사전 순",
+        "code": "import sys\nfrom collections import Counter\n\nwords = sys.stdin.read().split()\ncnt = Counter(words)\nfor w, c in sorted(cnt.items(), key=lambda x: (-x[1], x[0])):\n    print(w, c)\n",
+        "stdin": "pear apple kiwi apple pear plum apple\n",
+        "output": "apple 3\npear 2\nkiwi 1\nplum 1\n"
+      },
+      {
+        "title": "값이 처음 나온 위치 기억하기",
+        "code": "a = [7, 3, 7, 1, 3, 3, 9]\nfirst = {}\nfor i, x in enumerate(a):\n    if x not in first:\n        first[x] = i\nprint(first)\nprint(first.get(3, -1), first.get(5, -1))\n",
+        "output": "{7: 0, 3: 1, 1: 3, 9: 6}\n1 -1\n"
+      },
+      {
+        "title": "defaultdict 로 묶기, set 으로 비교하기",
+        "code": "from collections import defaultdict\n\nnames = [\"mina\", \"jun\", \"minsu\", \"jae\", \"hana\"]\ngroup = defaultdict(list)\nfor s in names:\n    group[s[0]].append(s)\nfor k in sorted(group):\n    print(k, group[k])\n\na = {1, 2, 3, 4}\nb = {3, 4, 5}\nprint(sorted(a & b), sorted(a | b), sorted(a - b), sorted(a ^ b))\n",
+        "output": "h ['hana']\nj ['jun', 'jae']\nm ['mina', 'minsu']\n[3, 4] [1, 2, 3, 4, 5] [1, 2] [1, 2, 5]\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "d = {}\nd[x] += 1",
+        "right": "d[x] = d.get(x, 0) + 1\n# 또는 cnt = Counter(); cnt[x] += 1",
+        "why": "처음 보는 키에 += 를 하면 KeyError 가 나요. get 의 기본값이나 Counter/defaultdict 를 쓰세요."
+      },
+      {
+        "wrong": "seen = set()\nseen.add([r, c])",
+        "right": "seen.add((r, c))",
+        "why": "리스트는 해시할 수 없어 TypeError 가 나요. 좌표는 튜플로 넣어요."
+      },
+      {
+        "wrong": "for q in queries:\n    if q in arr:   # arr 는 리스트",
+        "right": "s = set(arr)\nfor q in queries:\n    if q in s:",
+        "why": "리스트의 in 은 O(N) 이라 질의가 많으면 O(NQ) 로 느려져요. set 은 평균 O(1) 이에요."
+      },
+      {
+        "wrong": "for k in d:\n    if d[k] == 0:\n        del d[k]",
+        "right": "for k in list(d):\n    if d[k] == 0:\n        del d[k]",
+        "why": "순회 중에 크기를 바꾸면 RuntimeError(dictionary changed size during iteration)가 나요. 키 목록을 먼저 복사해요."
+      },
+      {
+        "wrong": "cnt[x] -= 1\nprint(len(cnt))   # Counter",
+        "right": "cnt[x] -= 1\nif cnt[x] == 0:\n    del cnt[x]",
+        "why": "Counter 에서 개수가 0 이 돼도 키는 남아요. 서로 다른 값의 개수를 len 으로 셀 거라면 0 이 된 키를 지워요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "unordered_map",
+        "signature": "unordered_map<K, V> m;",
+        "does": "해시 테이블 사전이에요. 순회 순서는 정해져 있지 않아요.",
+        "when": "키 순서가 필요 없는 빠른 조회·카운팅",
+        "complexity": "평균 O(1), 최악 O(N)"
+      },
+      {
+        "name": "operator[]",
+        "signature": "m[k]",
+        "does": "키가 없으면 기본값(0, 빈 문자열)으로 새 원소를 만들고 참조를 돌려줘요.",
+        "when": "카운팅(m[x]++)처럼 없으면 만들어도 될 때",
+        "complexity": "평균 O(1)"
+      },
+      {
+        "name": "count / find",
+        "signature": "m.count(k) / m.find(k) != m.end()",
+        "does": "원소를 만들지 않고 있는지만 확인해요. find 는 반복자로 값까지 읽을 수 있어요.",
+        "when": "존재 여부만 볼 때",
+        "complexity": "평균 O(1)"
+      },
+      {
+        "name": "unordered_set",
+        "signature": "unordered_set<T> s; s.insert(x); s.erase(x); s.count(x)",
+        "does": "중복 없는 해시 집합이에요.",
+        "when": "방문 여부, 중복 제거",
+        "complexity": "평균 O(1), 최악 O(N)"
+      },
+      {
+        "name": "map",
+        "signature": "map<K, V> m;",
+        "does": "키가 정렬된 상태로 유지되는 사전이에요(균형 이진 트리).",
+        "when": "키 순서대로 출력하거나 lower_bound 가 필요할 때, pair 키",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "set",
+        "signature": "set<T> s; s.lower_bound(x)",
+        "does": "정렬된 집합이에요. x 이상인 첫 원소를 찾을 수 있어요.",
+        "when": "정렬 순서 + 중복 제거 + 가까운 값 찾기",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "reserve",
+        "signature": "m.reserve(n)",
+        "does": "원소 n개가 들어갈 자리를 미리 잡아 재해시를 줄여요.",
+        "when": "원소 수를 미리 알 때 속도를 조금 올리고 싶을 때",
+        "complexity": "O(n)"
+      },
+      {
+        "name": "set_intersection 등",
+        "signature": "set_intersection(a.begin(), a.end(), b.begin(), b.end(), back_inserter(out))",
+        "does": "정렬된 두 범위의 교집합을 out 에 넣어요(set_union, set_difference 도 같은 꼴).",
+        "when": "정렬된 두 모음의 공통 원소",
+        "complexity": "O(N + M)"
+      },
+      {
+        "name": "구조적 바인딩 순회",
+        "signature": "for (auto& [k, v] : m)",
+        "does": "키와 값을 한 번에 꺼내며 돌아요. map 은 키 순, unordered_map 은 순서 없음이에요.",
+        "when": "모든 원소를 처리할 때",
+        "complexity": "O(N)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "단어 빈도: 많이 나온 순, 같으면 사전 순",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    unordered_map<string, int> cnt;\n    string w;\n    while (cin >> w) cnt[w]++;\n    vector<pair<string, int>> v(cnt.begin(), cnt.end());\n    sort(v.begin(), v.end(), [](const auto& a, const auto& b) {\n        if (a.second != b.second) return a.second > b.second;\n        return a.first < b.first;\n    });\n    for (auto& [s, c] : v) cout << s << ' ' << c << '\\n';\n    return 0;\n}\n",
+        "stdin": "pear apple kiwi apple pear plum apple\n",
+        "output": "apple 3\npear 2\nkiwi 1\nplum 1\n"
+      },
+      {
+        "title": "있는지만 확인할 때는 count, [] 는 원소를 만든다",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    unordered_map<int, int> first;\n    vector<int> a = {7, 3, 7, 1, 3, 3, 9};\n    for (int i = 0; i < (int)a.size(); i++)\n        if (!first.count(a[i])) first[a[i]] = i;\n    cout << first.size() << '\\n';\n\n    cout << (first.count(5) ? \"yes\" : \"no\") << ' ' << first.size() << '\\n';\n    if (first[5] == 0) cout << \"first[5] is 0, \";\n    cout << \"size now \" << first.size() << '\\n';\n    return 0;\n}\n",
+        "output": "4\nno 4\nfirst[5] is 0, size now 5\n"
+      },
+      {
+        "title": "map 은 키 순서, set 연산은 정렬된 범위로",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    map<char, vector<string>> group;\n    for (string s : {\"mina\", \"jun\", \"minsu\", \"jae\", \"hana\"}) group[s[0]].push_back(s);\n    for (auto& [k, v] : group) {\n        cout << k << ':';\n        for (auto& s : v) cout << ' ' << s;\n        cout << '\\n';\n    }\n\n    set<int> a = {1, 2, 3, 4}, b = {3, 4, 5};\n    vector<int> both, onlyA;\n    set_intersection(a.begin(), a.end(), b.begin(), b.end(), back_inserter(both));\n    set_difference(a.begin(), a.end(), b.begin(), b.end(), back_inserter(onlyA));\n    for (int x : both) cout << x << ' ';\n    cout << \"| \";\n    for (int x : onlyA) cout << x << ' ';\n    cout << '\\n';\n    return 0;\n}\n",
+        "output": "h: hana\nj: jun jae\nm: mina minsu\n3 4 | 1 2 \n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "map<string,int> m;\nif (m[\"x\"] > 0) { ... }\n// m.size() 가 1 이 됨",
+        "right": "if (m.count(\"x\") && m[\"x\"] > 0) { ... }\n// 또는 auto it = m.find(\"x\");",
+        "why": "[] 는 없는 키를 기본값으로 만들어 넣어요. 조회만 하려다 원소가 늘어나 size()나 순회 결과가 달라져요."
+      },
+      {
+        "wrong": "unordered_map<pair<int,int>, int> m;",
+        "right": "map<pair<int,int>, int> m;\n// 또는 unordered_map<long long,int> 에 (long long)r * W + c 로 넣기",
+        "why": "pair 에는 기본 해시가 없어 컴파일 오류가 나요. map 을 쓰거나 정수 하나로 바꿔 키로 써요."
+      },
+      {
+        "wrong": "for (auto it = m.begin(); it != m.end(); ++it)\n    if (it->second == 0) m.erase(it);",
+        "right": "for (auto it = m.begin(); it != m.end(); )\n    if (it->second == 0) it = m.erase(it);\n    else ++it;",
+        "why": "erase 한 반복자는 무효가 돼서 ++it 이 정의되지 않은 동작이에요. erase 가 돌려주는 다음 반복자를 받아요."
+      },
+      {
+        "wrong": "unordered_map<string,int> cnt;\nfor (auto& [k, v] : cnt) cout << k;  // 사전 순을 기대",
+        "right": "map<string,int> cnt;  // 또는 vector 로 옮겨 sort",
+        "why": "unordered_map 의 순회 순서는 정해져 있지 않아요. 정렬된 출력이 필요하면 map 을 쓰거나 따로 정렬해요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "있는지 없는지만 알면 될 때",
+      "use": "set / unordered_set"
+    },
+    {
+      "situation": "값마다 개수·위치·이름을 붙여 둘 때",
+      "use": "dict(Counter, defaultdict) / unordered_map"
+    },
+    {
+      "situation": "키 순서대로 출력하거나 x 이상인 가장 작은 키가 필요할 때",
+      "use": "Python 은 sorted(d) 또는 정렬 + bisect, C++ 은 map / set"
+    },
+    {
+      "situation": "키가 0 ~ 10^6 정도의 작은 정수일 때",
+      "use": "해시 대신 리스트·배열 인덱스로 세기(더 빠름)"
+    },
+    {
+      "situation": "좌표처럼 두 값을 키로 쓸 때",
+      "use": "Python 은 튜플, C++ 은 map<pair> 또는 r * W + c 로 정수 키"
+    }
+  ],
+  "checklist": [
+    "없는 키 접근: Python 은 KeyError, C++ [] 는 원소를 새로 만들어요",
+    "키가 해시 가능한지(리스트 대신 튜플, pair 는 unordered_map 기본 해시 없음)",
+    "출력 순서가 정해져 있으면 정렬했는지(해시 순서는 믿지 않기)",
+    "in / count 를 리스트가 아니라 set·dict 에 하는지",
+    "순회 중에 삽입·삭제하지 않는지",
+    "Counter 에서 0 이 된 키를 지워야 하는지(len 으로 종류 수를 셀 때)"
+  ]
+}
