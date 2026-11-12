@@ -1,0 +1,230 @@
+{
+  "slug": "bitmask",
+  "title": "비트마스크",
+  "category": "알고리즘",
+  "order": 5,
+  "summary": "정수 하나의 비트로 집합을 나타내요. 모든 부분집합 돌기와 상태를 압축한 DP 에 써요.",
+  "when": [
+    "원소가 20개 안팎인 집합의 모든 부분집합을 살펴볼 때",
+    "어떤 것들을 방문했는지를 정수 하나로 저장하는 DP 를 할 때(외판원 순회 등)",
+    "켜짐·꺼짐 같은 작은 상태를 BFS/DP 의 상태로 넣을 때",
+    "작은 집합의 합집합·교집합·차집합을 빠르게 계산할 때"
+  ],
+  "topics": [
+    "비트마스크"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "비트 확인",
+        "signature": "mask >> i & 1  # 또는 mask & (1 << i) != 0",
+        "does": "i 번째 원소가 집합에 있으면 1, 없으면 0 이에요.",
+        "when": "부분집합에 무엇이 들었는지 볼 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "켜기·끄기·뒤집기",
+        "signature": "mask | (1 << i)\nmask & ~(1 << i)\nmask ^ (1 << i)",
+        "does": "i 번째 원소를 넣고, 빼고, 있으면 빼고 없으면 넣어요.",
+        "when": "상태를 바꿔 다음 상태를 만들 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "모든 부분집합",
+        "signature": "for mask in range(1 << n):",
+        "does": "0부터 2^n - 1 까지가 n 개 원소의 모든 부분집합이에요.",
+        "when": "n 이 20 안팎일 때 써요(2^20 은 약 100만).",
+        "complexity": "O(2^N)"
+      },
+      {
+        "name": "부분집합의 부분집합",
+        "signature": "sub = mask\nwhile sub:\n    ...\n    sub = (sub - 1) & mask",
+        "does": "mask 에 켜진 비트만으로 만들 수 있는 부분집합을 큰 것부터 돌아요(공집합은 따로).",
+        "when": "모든 mask 에 대해 이렇게 돌면 전체가 3^N 이에요.",
+        "complexity": "mask 하나당 O(2^(켜진 비트 수))"
+      },
+      {
+        "name": "켜진 비트 수",
+        "signature": "bin(mask).count('1')  # 3.10+: mask.bit_count()",
+        "does": "집합의 크기를 세요.",
+        "when": "고른 원소 수 조건이 있을 때 써요.",
+        "complexity": "O(비트 수)"
+      },
+      {
+        "name": "가장 낮은 비트",
+        "signature": "mask & -mask",
+        "does": "가장 낮은 켜진 비트 하나만 남긴 값이에요.",
+        "when": "켜진 비트를 하나씩 떼어 낼 때나 펜윅 트리에서 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "비트 길이",
+        "signature": "mask.bit_length()",
+        "does": "가장 높은 켜진 비트의 위치 + 1 이에요(0 이면 0).",
+        "when": "이진수 자릿수가 필요할 때 써요.",
+        "complexity": "O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "기본 연산: 켜기, 확인, 뒤집기, 끄기, 여집합",
+        "code": "n = 5                                    # 원소 0..4\nmask = 0\nmask |= 1 << 1                           # 1번 켜기\nmask |= 1 << 3                           # 3번 켜기\nprint(format(mask, '05b'), mask)         # 앞에 0을 채워 5자리 이진수로\n\nprint('3번 있음?', (mask >> 3) & 1 == 1)\nprint('2번 있음?', (mask >> 2) & 1 == 1)\n\nmask ^= 1 << 0                           # 0번 뒤집기(꺼져 있으면 켜기)\nmask &= ~(1 << 3)                        # 3번 끄기\nprint(format(mask, '05b'))\n\nprint('켜진 개수', bin(mask).count('1'))\nprint('가장 낮은 켜진 비트', mask & -mask)\nfull = (1 << n) - 1\nprint('여집합', format(mask ^ full, '05b'))   # ~mask 는 음수가 돼요\n",
+        "output": "01010 10\n3번 있음? True\n2번 있음? False\n00011\n켜진 개수 2\n가장 낮은 켜진 비트 1\n여집합 11100\n"
+      },
+      {
+        "title": "모든 부분집합과 부분집합의 부분집합",
+        "code": "items = ['A', 'B', 'C']\nprice = [3, 5, 4]\nn = len(items)\nfor mask in range(1 << n):               # 0 .. 2^n - 1, 모든 부분집합\n    chosen = [items[i] for i in range(n) if mask >> i & 1]\n    total = sum(price[i] for i in range(n) if mask >> i & 1)\n    print(format(mask, '03b'), ''.join(chosen) or '-', total)\n\n# mask 의 부분집합만 돌기: sub = (sub - 1) & mask\nmask = 0b101\nsub = mask\nsubs = []\nwhile sub:\n    subs.append(format(sub, '03b'))\n    sub = (sub - 1) & mask\nsubs.append('000')                       # 공집합은 따로\nprint(' '.join(subs))\n",
+        "output": "000 - 0\n001 A 3\n010 B 5\n011 AB 8\n100 C 4\n101 AC 7\n110 BC 9\n111 ABC 12\n101 100 001 000\n"
+      },
+      {
+        "title": "비트마스크 DP: 모든 도시를 돌고 돌아오는 최소 비용",
+        "code": "INF = float('inf')\n# cost[i][j]: i 에서 j 로 가는 비용 (0 이면 길 없음)\ncost = [\n    [0, 10, 15, 20],\n    [5, 0, 9, 10],\n    [6, 13, 0, 12],\n    [8, 8, 9, 0],\n]\nn = len(cost)\nFULL = (1 << n) - 1\n# dp[mask][v]: 0번에서 출발해 mask 의 도시를 모두 방문하고 지금 v 에 있을 때 최소 비용\ndp = [[INF] * n for _ in range(1 << n)]\ndp[1][0] = 0\nfor mask in range(1 << n):\n    for v in range(n):\n        if dp[mask][v] == INF:\n            continue\n        for nxt in range(n):\n            if mask >> nxt & 1 or cost[v][nxt] == 0:\n                continue\n            nmask = mask | (1 << nxt)\n            dp[nmask][nxt] = min(dp[nmask][nxt], dp[mask][v] + cost[v][nxt])\n\nans = min(dp[FULL][v] + cost[v][0] for v in range(1, n) if cost[v][0])\nprint(ans)\n",
+        "output": "35\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "if mask & (1 << i) == 1:",
+        "right": "if mask >> i & 1:\n# 또는 if mask & (1 << i):",
+        "why": "mask & (1 << i) 는 0 이나 2^i 라서 i ≥ 1 이면 1 과 같을 수 없어요. 1 과 비교하려면 먼저 i 칸 밀어요."
+      },
+      {
+        "wrong": "rest = ~mask  # n 개 원소 중 없는 것",
+        "right": "rest = mask ^ ((1 << n) - 1)",
+        "why": "~mask 는 -mask - 1 이라 음수가 돼요. n 비트 안에서 뒤집으려면 전체 마스크와 XOR 해요."
+      },
+      {
+        "wrong": "len(bin(mask)) - 2  # 비트 길이로 씀",
+        "right": "mask.bit_length()",
+        "why": "bin(0) 은 '0b0' 이라 0 의 길이가 1 로 나와요. bit_length() 는 0 이면 0 이에요."
+      },
+      {
+        "wrong": "dp = [[INF] * n] * (1 << n)",
+        "right": "dp = [[INF] * n for _ in range(1 << n)]",
+        "why": "곱하기로 만든 2차원 리스트는 같은 행을 공유해서 한 칸을 바꾸면 모든 행이 바뀌어요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "비트 확인",
+        "signature": "(mask >> i) & 1",
+        "does": "i 번째 원소가 집합에 있으면 1, 없으면 0 이에요.",
+        "when": "부분집합에 무엇이 들었는지 볼 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "켜기·끄기·뒤집기",
+        "signature": "mask | (1 << i)\nmask & ~(1 << i)\nmask ^ (1 << i)",
+        "does": "i 번째 원소를 넣고, 빼고, 있으면 빼고 없으면 넣어요.",
+        "when": "상태를 바꿔 다음 상태를 만들 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "모든 부분집합",
+        "signature": "for (int mask = 0; mask < (1 << n); mask++)",
+        "does": "0부터 2^n - 1 까지가 n 개 원소의 모든 부분집합이에요.",
+        "when": "n 이 20 안팎일 때 써요.",
+        "complexity": "O(2^N)"
+      },
+      {
+        "name": "부분집합의 부분집합",
+        "signature": "for (int sub = mask; sub; sub = (sub - 1) & mask)",
+        "does": "mask 에 켜진 비트만으로 만들 수 있는 부분집합을 큰 것부터 돌아요(공집합은 따로).",
+        "when": "모든 mask 에 대해 이렇게 돌면 전체가 3^N 이에요.",
+        "complexity": "mask 하나당 O(2^(켜진 비트 수))"
+      },
+      {
+        "name": "__builtin_popcount",
+        "signature": "__builtin_popcount(x) / __builtin_popcountll(x)",
+        "does": "켜진 비트 수를 세요. long long 은 ll 이 붙은 쪽을 써요. C++20 이면 std::popcount 도 있어요.",
+        "when": "고른 원소 수 조건이 있을 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "__builtin_ctz",
+        "signature": "__builtin_ctz(x) / __builtin_ctzll(x)",
+        "does": "가장 낮은 켜진 비트의 위치(뒤쪽 0의 개수)예요. x = 0 이면 정의되지 않아요.",
+        "when": "켜진 비트 위치를 하나씩 꺼낼 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "bitset",
+        "signature": "bitset<N> b; b[i] = 1; b.count(); b.to_string()",
+        "does": "고정 크기 비트 배열이에요. 출력하면 이진수 문자열이 나와요.",
+        "when": "64비트보다 큰 집합을 다루거나 비트를 눈으로 확인할 때 써요.",
+        "complexity": "연산당 O(N / 64)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "기본 연산: 켜기, 확인, 뒤집기, 끄기, 여집합",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n = 5;                           // 원소 0..4\n    int mask = 0;\n    mask |= 1 << 1;                      // 1번 켜기\n    mask |= 1 << 3;                      // 3번 켜기\n    cout << bitset<5>(mask) << ' ' << mask << '\\n';\n\n    cout << \"3번 있음? \" << ((mask >> 3) & 1) << '\\n';\n    cout << \"2번 있음? \" << ((mask >> 2) & 1) << '\\n';\n\n    mask ^= 1 << 0;                      // 0번 뒤집기(꺼져 있으면 켜기)\n    mask &= ~(1 << 3);                   // 3번 끄기\n    cout << bitset<5>(mask) << '\\n';\n\n    cout << \"켜진 개수 \" << __builtin_popcount(mask) << '\\n';\n    cout << \"가장 낮은 켜진 비트 \" << (mask & -mask) << '\\n';\n    int full = (1 << n) - 1;\n    cout << \"여집합 \" << bitset<5>(mask ^ full) << '\\n';\n    return 0;\n}\n",
+        "output": "01010 10\n3번 있음? 1\n2번 있음? 0\n00011\n켜진 개수 2\n가장 낮은 켜진 비트 1\n여집합 11100\n"
+      },
+      {
+        "title": "모든 부분집합과 부분집합의 부분집합",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    vector<char> items = {'A', 'B', 'C'};\n    vector<int> price = {3, 5, 4};\n    int n = items.size();\n    for (int mask = 0; mask < (1 << n); mask++) {   // 모든 부분집합\n        string chosen;\n        int total = 0;\n        for (int i = 0; i < n; i++) {\n            if ((mask >> i) & 1) {\n                chosen += items[i];\n                total += price[i];\n            }\n        }\n        cout << bitset<3>(mask) << ' ' << (chosen.empty() ? \"-\" : chosen) << ' ' << total << '\\n';\n    }\n\n    // mask 의 부분집합만 돌기: sub = (sub - 1) & mask\n    int mask = 0b101;\n    for (int sub = mask; sub; sub = (sub - 1) & mask) cout << bitset<3>(sub) << ' ';\n    cout << \"000\\n\";                     // 공집합은 따로\n    return 0;\n}\n",
+        "output": "000 - 0\n001 A 3\n010 B 5\n011 AB 8\n100 C 4\n101 AC 7\n110 BC 9\n111 ABC 12\n101 100 001 000\n"
+      },
+      {
+        "title": "비트마스크 DP: 모든 도시를 돌고 돌아오는 최소 비용",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    const int INF = 1e9;\n    // cost[i][j]: i 에서 j 로 가는 비용 (0 이면 길 없음)\n    vector<vector<int>> cost = {\n        {0, 10, 15, 20},\n        {5, 0, 9, 10},\n        {6, 13, 0, 12},\n        {8, 8, 9, 0},\n    };\n    int n = cost.size();\n    int FULL = (1 << n) - 1;\n    // dp[mask][v]: 0번에서 출발해 mask 의 도시를 모두 방문하고 지금 v 에 있을 때 최소 비용\n    vector<vector<int>> dp(1 << n, vector<int>(n, INF));\n    dp[1][0] = 0;\n    for (int mask = 0; mask < (1 << n); mask++) {\n        for (int v = 0; v < n; v++) {\n            if (dp[mask][v] == INF) continue;\n            for (int nxt = 0; nxt < n; nxt++) {\n                if (((mask >> nxt) & 1) || cost[v][nxt] == 0) continue;\n                int nmask = mask | (1 << nxt);\n                dp[nmask][nxt] = min(dp[nmask][nxt], dp[mask][v] + cost[v][nxt]);\n            }\n        }\n    }\n\n    int ans = INF;\n    for (int v = 1; v < n; v++)\n        if (cost[v][0] && dp[FULL][v] < INF) ans = min(ans, dp[FULL][v] + cost[v][0]);\n    cout << ans << '\\n';\n    return 0;\n}\n",
+        "output": "35\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "if (mask & 1 << i == 0)",
+        "right": "if ((mask & (1 << i)) == 0)",
+        "why": "C++ 에서는 == 가 & 보다 먼저 묶여서 mask & ((1 << i) == 0) 이 돼요. Python 은 & 가 먼저라 결과가 달라요. 괄호를 꼭 써요."
+      },
+      {
+        "wrong": "long long m = 1 << 40;",
+        "right": "long long m = 1LL << 40;",
+        "why": "1 은 int 라서 31칸보다 많이 밀면 정의되지 않은 동작이에요. 결과를 long long 에 넣어도 늦어요. g++ 는 경고를 내요."
+      },
+      {
+        "wrong": "__builtin_popcount(x)  // x 가 long long",
+        "right": "__builtin_popcountll(x)",
+        "why": "__builtin_popcount 는 unsigned int 를 받아서 위쪽 32비트가 잘려요. x = 1LL << 40 이면 0 이 나와요."
+      },
+      {
+        "wrong": "int rest = ~mask;  // n 개 원소 중 없는 것",
+        "right": "int rest = mask ^ ((1 << n) - 1);",
+        "why": "~mask 는 위쪽 비트까지 모두 뒤집어 음수가 돼요. n 비트 안에서만 뒤집어요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "원소가 20개 안팎이고 모든 부분집합을 봐야 할 때",
+      "use": "0 ~ 2^N - 1 반복"
+    },
+    {
+      "situation": "방문 순서가 중요하고 원소가 16개 안팎일 때",
+      "use": "비트마스크 DP(dp[mask][마지막], O(2^N · N^2))"
+    },
+    {
+      "situation": "원소가 40개 안팎이고 부분집합의 합을 볼 때",
+      "use": "반으로 나눠 각각 부분집합을 만들고 합치기"
+    },
+    {
+      "situation": "원소가 수십 개를 넘을 때",
+      "use": "비트마스크로 모든 경우를 볼 수 없어요. DP·그리디 등 다른 방법을 찾아요"
+    },
+    {
+      "situation": "수천 비트짜리 집합 연산이 필요할 때",
+      "use": "C++ bitset, Python 큰 정수"
+    }
+  ],
+  "checklist": [
+    "2^N(× 상태 수)이 시간 안에 드는지 확인했나요? 2^20 은 약 100만이에요.",
+    "C++ 에서 & 와 == 를 함께 쓸 때 괄호를 쳤나요?",
+    "32칸 이상 밀 때 1LL << i 로 썼나요?",
+    "원소 번호를 0부터 매겼나요? 1부터면 1 << (i - 1) 이에요.",
+    "여집합은 ~ 대신 전체 마스크와 XOR 로 구하나요?",
+    "dp 배열 크기가 (1 << N) × 상태 수로 메모리 안에 드나요?"
+  ]
+}
