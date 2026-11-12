@@ -1,3 +1,61 @@
 {
-  "concepts": []
+  "concepts": [
+    {
+      "slug": "binary-search",
+      "title": "이분 탐색(파라메트릭 서치 포함)",
+      "category": "탐색",
+      "summary": "정렬된 범위에서 경계를 O(log N)에 찾고, 답을 정해 놓고 가능 여부로 범위를 좁혀요",
+      "topics": [
+        "이분 탐색",
+        "파라메트릭 서치"
+      ]
+    },
+    {
+      "slug": "brute-force",
+      "title": "완전탐색·백트래킹(itertools / next_permutation)",
+      "category": "탐색",
+      "summary": "가능한 경우를 모두 만들어 보고, 백트래킹으로 안 되는 가지는 일찍 잘라요",
+      "topics": [
+        "백트래킹"
+      ]
+    },
+    {
+      "slug": "greedy",
+      "title": "그리디",
+      "category": "알고리즘",
+      "summary": "매 순간 가장 좋아 보이는 것을 고르되, 그 선택이 항상 옳은지 먼저 확인해요",
+      "topics": [
+        "그리디"
+      ]
+    },
+    {
+      "slug": "dp",
+      "title": "동적 계획법(DP)",
+      "category": "알고리즘",
+      "summary": "작은 문제의 답을 표에 저장해 두고, 그것으로 큰 문제의 답을 만들어요",
+      "topics": [
+        "DP",
+        "LIS"
+      ]
+    },
+    {
+      "slug": "bfs",
+      "title": "BFS",
+      "category": "그래프",
+      "summary": "가까운 곳부터 차례로 퍼져 나가며 가중치 없는 그래프의 최단 거리를 구해요",
+      "topics": [
+        "BFS"
+      ]
+    },
+    {
+      "slug": "dfs",
+      "title": "DFS",
+      "category": "그래프",
+      "summary": "한 갈래를 끝까지 따라간 뒤 되돌아오며 연결 요소·트리 정보·사이클을 찾아요",
+      "topics": [
+        "DFS",
+        "연결 요소"
+      ]
+    }
+  ]
 }

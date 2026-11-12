@@ -1,0 +1,232 @@
+{
+  "slug": "binary-search",
+  "title": "이분 탐색(파라메트릭 서치 포함)",
+  "category": "탐색",
+  "order": 1,
+  "summary": "정렬된 범위에서 경계를 O(log N)에 찾고, 답을 정해 놓고 가능 여부로 범위를 좁혀요",
+  "when": [
+    "정렬된 배열에서 x 이상(초과)인 첫 위치를 찾을 때",
+    "정렬된 배열에서 값 x 의 개수나 [l, r] 범위에 든 원소 개수를 셀 때",
+    "질문(쿼리)이 많아서 매번 O(N)으로 훑으면 시간이 모자랄 때",
+    "답 x 가 가능하면 더 큰(작은) 값도 가능한, 단조로운 조건에서 최솟값·최댓값을 찾을 때(파라메트릭 서치)",
+    "답의 범위가 10^9, 10^18 처럼 커서 하나씩 시도할 수 없을 때",
+    "LIS 길이를 N log N 으로 구할 때 위치 찾기 도구로"
+  ],
+  "topics": [
+    "이분 탐색",
+    "파라메트릭 서치"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "bisect_left",
+        "signature": "bisect.bisect_left(a, x, lo=0, hi=len(a), *, key=None)",
+        "does": "정렬된 a 에서 a[i] >= x 인 첫 위치 i 를 돌려줘요. x 가 없으면 넣을 자리예요.",
+        "when": "x 이상인 첫 위치, x 미만인 원소 개수를 구할 때",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "bisect_right (= bisect)",
+        "signature": "bisect.bisect_right(a, x, lo=0, hi=len(a), *, key=None)",
+        "does": "정렬된 a 에서 a[i] > x 인 첫 위치를 돌려줘요. 같은 값들의 오른쪽 끝 다음이에요.",
+        "when": "x 초과인 첫 위치, x 이하인 원소 개수를 구할 때",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "범위 개수 세기",
+        "signature": "bisect_right(a, r) - bisect_left(a, l)",
+        "does": "l 이상 r 이하인 원소 개수예요. l == r 이면 값 l 의 개수가 돼요.",
+        "when": "정렬된 배열에 '몇 개 있나' 질문이 여러 번 올 때",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "insort",
+        "signature": "bisect.insort(a, x)  # insort_left / insort_right",
+        "does": "정렬을 유지하면서 x 를 넣어요. 위치 찾기는 O(log N)이지만 리스트 삽입이 O(N)이에요.",
+        "when": "원소 수가 작고 정렬 상태를 유지해야 할 때",
+        "complexity": "O(N) (탐색 O(log N) + 삽입 O(N))"
+      },
+      {
+        "name": "key 인자 (3.10+)",
+        "signature": "bisect_left(a, x, key=lambda e: e[0])",
+        "does": "a 의 원소에서 비교할 값을 뽑아요. 찾는 값 x 에는 key 가 적용되지 않아서 x 는 이미 뽑힌 값으로 줘요.",
+        "when": "튜플 리스트를 첫 원소 기준으로 찾을 때",
+        "complexity": "O(log N) (key 호출 포함)"
+      },
+      {
+        "name": "lo/hi 직접 구현(파라메트릭 서치)",
+        "signature": "while hi - lo > 1: mid = (lo + hi) // 2",
+        "does": "ok(lo) 는 참, ok(hi) 는 거짓이라는 약속을 지키며 범위를 반씩 줄여요. 끝나면 lo 가 참인 마지막 값, hi 가 거짓인 첫 값이에요.",
+        "when": "배열이 아니라 '답 x 가 가능한가' 판정 함수로 찾을 때",
+        "complexity": "O(log(hi - lo)) × 판정 비용"
+      }
+    ],
+    "examples": [
+      {
+        "title": "범위에 든 원소 개수 세기",
+        "code": "import sys\nfrom bisect import bisect_left, bisect_right\n\ninput = sys.stdin.readline\nn = int(input())\na = sorted(map(int, input().split()))   # 이분 탐색 전에 정렬\nq = int(input())\nfor _ in range(q):\n    l, r = map(int, input().split())\n    # l 이상 r 이하인 원소 개수\n    print(bisect_right(a, r) - bisect_left(a, l))\n",
+        "stdin": "7\n5 1 9 3 3 7 3\n4\n3 3\n2 6\n10 20\n1 9\n",
+        "output": "3\n4\n0\n7\n"
+      },
+      {
+        "title": "파라메트릭 서치: x*x <= n 인 가장 큰 x",
+        "code": "import math\n\n\ndef ok(x, n):\n    return x * x <= n\n\n\ndef largest_ok(n):\n    lo, hi = 0, n + 1          # ok(lo) 는 참, ok(hi) 는 거짓\n    while hi - lo > 1:\n        mid = (lo + hi) // 2\n        if ok(mid, n):\n            lo = mid           # 참이면 답은 mid 이상\n        else:\n            hi = mid           # 거짓이면 답은 mid 미만\n    return lo\n\n\nfor n in [0, 1, 15, 16, 10**18, 10**18 - 1]:\n    print(n, largest_ok(n), math.isqrt(n))\n",
+        "output": "0 0 0\n1 1 1\n15 3 3\n16 4 4\n1000000000000000000 1000000000 1000000000\n999999999999999999 999999999 999999999\n"
+      },
+      {
+        "title": "insort 와 key 인자",
+        "code": "from bisect import bisect_left, insort\n\nscores = []\nfor s in [70, 85, 60, 85, 90]:\n    insort(scores, s)          # 정렬을 유지하며 넣기\nprint(scores)\n\n# 키 순으로 정렬된 (키, 이름) 목록에서 170 이상인 첫 사람\npeople = [(160, \"민수\"), (172, \"지은\"), (181, \"현우\")]\ni = bisect_left(people, 170, key=lambda p: p[0])   # x(170)에는 key 가 적용되지 않아요\nprint(i, people[i][1])\n",
+        "output": "[60, 70, 85, 85, 90]\n1 지은\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "a = [1, 3, 3, 5]\nbisect_left(a, 3)   # 3 이하 개수라고 생각했지만 1",
+        "right": "bisect_right(a, 3)  # 3 이하 개수 = 3",
+        "why": "bisect_left 는 같은 값들의 왼쪽 끝을 돌려줘요. 같은 값이 여러 개 있는 예로 left/right 를 꼭 확인해요."
+      },
+      {
+        "wrong": "while lo < hi:\n    mid = (lo + hi) // 2\n    if ok(mid): lo = mid\n    else: hi = mid - 1",
+        "right": "while lo < hi:\n    mid = (lo + hi + 1) // 2   # 올림\n    if ok(mid): lo = mid\n    else: hi = mid - 1",
+        "why": "hi = lo + 1 일 때 내림 mid 는 lo 와 같아서 ok(mid) 가 참이면 범위가 줄지 않고 무한 루프가 돼요. lo = mid 를 쓰면 mid 를 올림으로 잡아요."
+      },
+      {
+        "wrong": "for x in data:          # N = 2×10^5\n    insort(arr, x)",
+        "right": "arr = sorted(data)      # 한꺼번에 정렬 O(N log N)",
+        "why": "insort 는 한 번에 O(N)이라 N 번 하면 O(N^2)이에요. 다 모은 뒤 질문만 받는다면 한 번 정렬해요."
+      },
+      {
+        "wrong": "bisect_left(people, (170,), key=lambda p: p[0])",
+        "right": "bisect_left(people, 170, key=lambda p: p[0])",
+        "why": "key 는 리스트 원소에만 적용돼요. x 에 원소 모양 그대로 넣으면 int 와 tuple 을 비교하다 TypeError 가 나요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "lower_bound",
+        "signature": "lower_bound(v.begin(), v.end(), x)",
+        "does": "정렬된 범위에서 x 이상인 첫 원소의 반복자를 돌려줘요. 없으면 end() 예요. 인덱스는 it - v.begin().",
+        "when": "x 이상인 첫 위치, x 미만인 원소 개수를 구할 때",
+        "complexity": "O(log N) (vector 같은 임의 접근 반복자)"
+      },
+      {
+        "name": "upper_bound",
+        "signature": "upper_bound(v.begin(), v.end(), x)",
+        "does": "x 초과인 첫 원소의 반복자를 돌려줘요.",
+        "when": "x 이하인 원소 개수, x 초과인 첫 값을 구할 때",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "equal_range",
+        "signature": "auto [lo, hi] = equal_range(v.begin(), v.end(), x);",
+        "does": "lower_bound 와 upper_bound 를 한 번에 pair 로 돌려줘요. hi - lo 가 x 의 개수예요.",
+        "when": "값 x 가 차지하는 구간이 필요할 때",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "binary_search",
+        "signature": "binary_search(v.begin(), v.end(), x)",
+        "does": "x 가 있는지만 bool 로 알려 줘요. 위치는 주지 않아요.",
+        "when": "존재 여부만 필요할 때",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "set/map 의 멤버 lower_bound",
+        "signature": "s.lower_bound(x)  /  s.upper_bound(x)",
+        "does": "정렬된 트리에서 x 이상(초과)인 첫 원소의 반복자를 돌려줘요. 원소를 넣고 빼면서 쓸 수 있어요.",
+        "when": "삽입·삭제가 섞인 상태에서 x 이상 최솟값을 찾을 때",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "partition_point",
+        "signature": "partition_point(v.begin(), v.end(), pred)",
+        "does": "앞쪽은 pred 가 참, 뒤쪽은 거짓으로 나뉜 범위에서 첫 거짓 위치를 돌려줘요.",
+        "when": "배열 위에서 단조 조건의 경계를 찾을 때",
+        "complexity": "O(log N)번 pred 호출"
+      },
+      {
+        "name": "lo/hi 직접 구현(파라메트릭 서치)",
+        "signature": "while (hi - lo > 1) { long long mid = lo + (hi - lo) / 2; ... }",
+        "does": "ok(lo) 는 참, ok(hi) 는 거짓이라는 약속을 지키며 범위를 반씩 줄여요.",
+        "when": "답 x 가 가능한지 판정하는 함수로 최대·최소를 찾을 때",
+        "complexity": "O(log(hi - lo)) × 판정 비용"
+      }
+    ],
+    "examples": [
+      {
+        "title": "범위에 든 원소 개수 세기",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n    int n;\n    cin >> n;\n    vector<int> a(n);\n    for (auto& x : a) cin >> x;\n    sort(a.begin(), a.end());                // 이분 탐색 전에 정렬\n    int q;\n    cin >> q;\n    while (q--) {\n        int l, r;\n        cin >> l >> r;\n        // l 이상 r 이하인 원소 개수\n        auto lo = lower_bound(a.begin(), a.end(), l);\n        auto hi = upper_bound(a.begin(), a.end(), r);\n        cout << (hi - lo) << '\\n';\n    }\n    return 0;\n}\n",
+        "stdin": "7\n5 1 9 3 3 7 3\n4\n3 3\n2 6\n10 20\n1 9\n",
+        "output": "3\n4\n0\n7\n"
+      },
+      {
+        "title": "파라메트릭 서치: x*x <= n 인 가장 큰 x (오버플로 없이)",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\n// n 은 0 이상 10^18 이하\nlong long largest_ok(long long n) {\n    long long lo = 0, hi = 2000000000LL;    // ok(lo) 참, ok(hi) 거짓 (2*10^9 의 제곱 > 10^18)\n    while (hi - lo > 1) {\n        long long mid = lo + (hi - lo) / 2;\n        if (mid <= n / mid) lo = mid;        // mid*mid <= n 을 곱하지 않고 확인 (mid >= 1)\n        else hi = mid;\n    }\n    return lo;\n}\n\nint main() {\n    long long ns[] = {0, 1, 15, 16, 1000000000000000000LL, 999999999999999999LL};\n    for (long long n : ns) cout << n << ' ' << largest_ok(n) << '\\n';\n    return 0;\n}\n",
+        "output": "0 0\n1 1\n15 3\n16 4\n1000000000000000000 1000000000\n999999999999999999 999999999\n"
+      },
+      {
+        "title": "set 의 lower_bound, equal_range, partition_point",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    set<int> s = {10, 20, 30};\n    cout << *s.lower_bound(15) << '\\n';            // 멤버 함수라 O(log N)\n    s.insert(15);\n    cout << *s.lower_bound(15) << '\\n';\n    if (s.upper_bound(30) == s.end()) cout << \"30 초과 없음\\n\";\n\n    vector<int> v = {1, 3, 3, 3, 5, 8};\n    auto [lo, hi] = equal_range(v.begin(), v.end(), 3);\n    cout << (lo - v.begin()) << ' ' << (hi - v.begin()) << '\\n';\n    cout << binary_search(v.begin(), v.end(), 4) << '\\n';\n\n    // 앞쪽은 참, 뒤쪽은 거짓인 조건의 첫 거짓 위치\n    auto p = partition_point(v.begin(), v.end(), [](int x) { return x * x < 20; });\n    cout << (p - v.begin()) << '\\n';\n    return 0;\n}\n",
+        "output": "20\n15\n30 초과 없음\n1 4\n0\n4\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "set<int> s;\nauto it = lower_bound(s.begin(), s.end(), x);",
+        "right": "auto it = s.lower_bound(x);",
+        "why": "set 반복자는 임의 접근이 안 돼서 std::lower_bound 가 반복자를 하나씩 옮겨요. 결과는 맞지만 O(N)이라 시간 초과가 나요."
+      },
+      {
+        "wrong": "long long lo = 0, hi = n;   // n 최대 10^18\nif (mid * mid <= n) lo = mid;",
+        "right": "if (mid <= n / mid) lo = mid;   // 또는 hi 를 2e9 로 줄이기",
+        "why": "mid 가 5×10^17 근처면 mid*mid 가 long long 범위를 넘어 오버플로(정의되지 않은 동작)가 나요."
+      },
+      {
+        "wrong": "int mid = (lo + hi) / 2;   // lo, hi 가 10^9 이상",
+        "right": "int mid = lo + (hi - lo) / 2;   // 또는 long long 으로",
+        "why": "lo + hi 가 int 최댓값(약 2.1×10^9)을 넘으면 오버플로가 나요. Python 은 정수 크기 제한이 없어서 이 문제가 없어요."
+      },
+      {
+        "wrong": "int y = *lower_bound(v.begin(), v.end(), x);",
+        "right": "auto it = lower_bound(v.begin(), v.end(), x);\nif (it != v.end()) y = *it;",
+        "why": "x 이상인 원소가 없으면 end() 가 나오고, end() 를 역참조하면 정의되지 않은 동작이에요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "정렬된 배열에서 x 이상인 첫 위치(x 미만 개수)",
+      "use": "bisect_left / lower_bound"
+    },
+    {
+      "situation": "x 초과인 첫 위치(x 이하 개수)",
+      "use": "bisect_right / upper_bound"
+    },
+    {
+      "situation": "값 x 의 개수, [l, r] 안 원소 개수",
+      "use": "right(r) - left(l) / upper_bound - lower_bound"
+    },
+    {
+      "situation": "원소를 넣고 빼면서 x 이상 최솟값을 계속 찾음",
+      "use": "C++ set::lower_bound. Python 은 표준에 같은 구조가 없어서 질문을 모아 정렬하는 등 다른 방법을 찾아요"
+    },
+    {
+      "situation": "답이 단조(가능 → 불가능이 한 번만 바뀜)이고 범위가 큼",
+      "use": "파라메트릭 서치(lo/hi 직접 구현)"
+    },
+    {
+      "situation": "정렬 안 된 배열에서 한 번만 찾음",
+      "use": "선형 탐색 O(N). 정렬 O(N log N)이 더 비싸요"
+    }
+  ],
+  "checklist": [
+    "배열이 찾는 기준과 같은 기준으로 정렬돼 있나요?",
+    "같은 값이 여러 개인 예로 left/right(lower/upper)를 확인했나요?",
+    "lo, hi 처음 값이 답이 될 수 있는 모든 값을 포함하나요(ok(lo) 참, ok(hi) 거짓)?",
+    "매 반복마다 범위가 줄어드나요(lo = mid 이면 mid 를 올림으로)?",
+    "C++: mid 계산과 판정식에서 오버플로가 없나요(long long, mid <= n / mid)?",
+    "결과가 len(a) / end() 인 경우(찾는 값이 없음)를 처리했나요?"
+  ]
+}
