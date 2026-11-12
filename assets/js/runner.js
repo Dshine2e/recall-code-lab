@@ -33,6 +33,58 @@ export function firstDiffLine(expected, actual) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Wandbox 요청 제한: 실측으로 IP당 약 1분에 10회, 넘으면 429(Retry-After 없음).
+// 제한을 넘지 않도록 이 브라우저에서 보낸 요청 시각을 기록해 두고, 자리가 날 때까지 기다렸다 보낸다.
+// (기록은 탭 사이에 공유하려고 localStorage에 두지만, 못 쓰면 메모리로만 동작한다.)
+// globalThis.__RECALL_RATE__ 는 화면 테스트(tests/e2e.cjs)에서만 값을 줄이거나 늘리는 데 쓴다.
+const RATE_OVERRIDE = globalThis.__RECALL_RATE__ || {};
+export const RATE_LIMIT = RATE_OVERRIDE.limit ?? 10;
+export const RATE_WINDOW_MS = RATE_OVERRIDE.windowMs ?? 62000;
+const RATE_KEY = 'recall-wandbox-log-v1';
+// 429를 받으면 이만큼 뒤에 한 자리가 나는 것으로 본다(실측 회복 약 15초)
+const RATE_PENALTY_MS = RATE_OVERRIDE.penaltyMs ?? 15000;
+let memLog = [];
+
+function readLog() {
+  try {
+    const v = JSON.parse(localStorage.getItem(RATE_KEY) || '[]');
+    if (Array.isArray(v)) return v.filter((t) => Number.isFinite(t));
+  } catch { /* 저장소 없음 */ }
+  return memLog.slice();
+}
+function writeLog(log) {
+  memLog = log.slice();
+  try { localStorage.setItem(RATE_KEY, JSON.stringify(log)); } catch { /* 저장소 없음 */ }
+}
+function liveLog(now) {
+  return readLog().filter((t) => t > now - RATE_WINDOW_MS && t < now + RATE_WINDOW_MS);
+}
+
+/** 보낼 자리가 날 때까지 기다린다. 기다리는 동안 onWait(남은 초)를 부른다. */
+async function acquireSlot(onWait) {
+  let waited = false;
+  for (;;) {
+    const now = Date.now();
+    const log = liveLog(now);
+    if (log.length < RATE_LIMIT) {
+      log.push(now);
+      writeLog(log);
+      return waited;
+    }
+    const waitMs = Math.max(200, Math.min(...log) + RATE_WINDOW_MS - now);
+    waited = true;
+    if (onWait) onWait(Math.ceil(waitMs / 1000));
+    await sleep(Math.min(waitMs, 1000));
+  }
+}
+
+/** 429를 받았을 때: 창을 가득 찬 것으로 기록해, 약 15초 뒤부터 6초에 한 번씩만 자리가 나게 한다. */
+function markRateLimited() {
+  const base = Date.now() - RATE_WINDOW_MS + RATE_PENALTY_MS;
+  const step = Math.ceil(RATE_WINDOW_MS / RATE_LIMIT);
+  writeLog(Array.from({ length: RATE_LIMIT }, (_, k) => base + k * step));
+}
+
 // Wandbox 실행 환경 자체의 오류(예: status 126 + "OCI runtime error: crun: clone: Resource temporarily unavailable").
 // 사용자 코드가 낸 출력이 없고 오류 메시지가 컨테이너 런타임에서 온 경우만 해당한다.
 const SANDBOX_FAILURE = /OCI runtime (create |exec )?(error|failed)|\b(crun|runc): |Resource temporarily unavailable/;
@@ -42,14 +94,18 @@ export function isSandboxFailure(data) {
 }
 
 /**
- * Wandbox 한 번 호출. 429/5xx/네트워크 오류는 1회 재시도.
+ * Wandbox 한 번 호출. 요청 제한(RATE_LIMIT/RATE_WINDOW_MS)을 지키도록 필요하면 먼저 기다린다.
+ * 429/5xx/네트워크 오류/실행 서버 과부하는 1회 재시도.
+ * hooks.onWait(남은 초): 제한 때문에 기다리는 중, hooks.onSend(): 실제로 보낼 때.
  * 반환: { kind: 'ok', data, ms } | { kind: 'timeout', ms } | { kind: 'service', message }
  */
-export async function callWandbox(lang, code, stdin) {
+export async function callWandbox(lang, code, stdin, hooks = {}) {
   const cfg = LANGS[lang];
   const body = JSON.stringify({ compiler: cfg.compiler, code, stdin: stdin ?? '', options: cfg.options, save: false });
   let lastMessage = '';
   for (let attempt = 0; attempt < 2; attempt += 1) {
+    await acquireSlot(hooks.onWait);
+    if (hooks.onSend) hooks.onSend();
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
     const start = performance.now();
@@ -69,7 +125,13 @@ export async function callWandbox(lang, code, stdin) {
       return { kind: 'service', message: lastMessage };
     }
     try {
-      if (res.status === 429 || res.status >= 500) {
+      if (res.status === 429) {
+        lastMessage = '요청이 많아 잠시 막혔어요(HTTP 429)';
+        markRateLimited();
+        if (attempt === 0) continue; // 자리가 날 때까지 acquireSlot이 기다린 뒤 1회 재시도
+        return { kind: 'service', message: lastMessage };
+      }
+      if (res.status >= 500) {
         lastMessage = `HTTP ${res.status}`;
         if (attempt === 0) {
           const retryAfter = Number(res.headers.get('Retry-After'));
@@ -126,7 +188,7 @@ export function interpret(data) {
 /**
  * 전체 테스트 실행(동시 2개).
  * onUpdate(results) 는 결과가 바뀔 때마다 호출된다.
- * 결과 verdict: pass | fail | error | compile | timeout | service | skipped | pending | running
+ * 결과 verdict: pass | fail | error | compile | timeout | service | skipped | pending | waiting | running
  */
 export async function runTests(lang, code, tests, onUpdate) {
   const results = tests.map((t) => ({ label: t.label, verdict: 'pending', ms: null, stdout: '', stderr: '' }));
@@ -139,10 +201,11 @@ export async function runTests(lang, code, tests, onUpdate) {
       const i = next;
       next += 1;
       if (compileError) { results[i].verdict = 'skipped'; notify(); continue; }
-      results[i].verdict = 'running';
-      notify();
-      const r = await callWandbox(lang, code, tests[i].input);
       const out = results[i];
+      const r = await callWandbox(lang, code, tests[i].input, {
+        onWait: (sec) => { out.verdict = 'waiting'; out.waitSec = sec; notify(); },
+        onSend: () => { out.verdict = 'running'; delete out.waitSec; notify(); },
+      });
       if (r.kind === 'service') {
         out.verdict = 'service';
         out.message = r.message;
@@ -179,8 +242,8 @@ export async function runTests(lang, code, tests, onUpdate) {
 }
 
 /** 직접 입력으로 한 번 실행 */
-export async function runCustom(lang, code, stdin) {
-  const r = await callWandbox(lang, code, stdin);
+export async function runCustom(lang, code, stdin, hooks = {}) {
+  const r = await callWandbox(lang, code, stdin, hooks);
   if (r.kind !== 'ok') return r;
   return { kind: 'ok', ms: r.ms, ...interpret(r.data) };
 }

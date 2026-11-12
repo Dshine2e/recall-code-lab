@@ -1,6 +1,6 @@
 import { loadProblems, parseDescription, paragraphs, syntaxTokens } from './data.js';
 import * as store from './store.js';
-import { LANGS, runTests, runCustom, firstDiffLine } from './runner.js';
+import { LANGS, RATE_LIMIT, runTests, runCustom, firstDiffLine } from './runner.js';
 import { esc, fmtMs, fmtWhen, clip, toast, copyText, debounce } from './util.js';
 
 const viewEl = document.getElementById('view');
@@ -402,7 +402,8 @@ function renderProblem(id) {
       return;
     }
     const total = res.total ?? p.tests.length;
-    const done = res.results.filter((r) => !['pending', 'running'].includes(r.verdict)).length;
+    const done = res.results.filter((r) => !['pending', 'waiting', 'running'].includes(r.verdict)).length;
+    const waiting = live && res.results.some((r) => r.verdict === 'waiting');
     const passed = res.results.filter((r) => r.verdict === 'pass').length;
     const service = res.results.filter((r) => r.verdict === 'service').length;
     const cls = passed === total ? 'pass-all' : passed ? 'pass-some' : 'pass-none';
@@ -420,6 +421,7 @@ function renderProblem(id) {
         <small class="muted">시간은 네트워크·컴파일을 포함한 왕복 시간이에요.</small>
       </div>
       <div class="progress" aria-hidden="true"><span style="width:${total ? (passed / total) * 100 : 0}%"></span></div>
+      ${waiting ? `<div class="msg msg-wait" style="margin-bottom:12px">Wandbox는 1분에 약 ${RATE_LIMIT}번까지만 실행할 수 있어요. 자리가 나면 이어서 실행할게요.</div>` : ''}
       ${service && !live ? `<div class="msg msg-service" style="margin-bottom:12px">실행 서비스에 연결하지 못했어요. 테스트 ${service}개를 확인하지 못했어요 — 잠시 후 다시 실행해 주세요. (이번 결과는 풀이 기록에 남기지 않았어요)</div>` : ''}
       ${cheer ? `<p class="cheer">${cheer}</p>` : ''}
       ${res.compileError ? `<div class="error-box"><h4>컴파일 오류</h4><pre>${esc(clip(res.compileError, SHOW_OUTPUT))}</pre></div>` : ''}
@@ -430,7 +432,7 @@ function renderProblem(id) {
 
   const VERDICT = {
     pass: '통과', fail: '실패', error: '런타임 오류', compile: '컴파일 오류', timeout: '시간 초과',
-    service: '연결 실패', skipped: '건너뜀', pending: '대기', running: '실행 중',
+    service: '연결 실패', skipped: '건너뜀', pending: '대기', waiting: '대기', running: '실행 중',
   };
 
   function resultItemHtml(r, i) {
@@ -440,7 +442,8 @@ function renderProblem(id) {
       <span class="r-label" title="${esc(r.label)}">${i + 1}. ${esc(r.label)}</span>
       <span class="r-time">${fmtMs(r.ms)}</span>`;
     if (!['fail', 'error', 'timeout'].includes(r.verdict)) {
-      const extra = r.verdict === 'service' ? `<span class="muted" style="font-size:12px">${esc(r.message || '')}</span>` : '';
+      const extra = r.verdict === 'service' ? `<span class="muted" style="font-size:12px">${esc(r.message || '')}</span>`
+        : r.verdict === 'waiting' ? `<span class="muted" style="font-size:12px">${r.waitSec}초 후 실행</span>` : '';
       return `<div class="result-item"><div class="result-line">${head}${extra}</div></div>`;
     }
     const diffLine = r.verdict === 'fail' ? firstDiffLine(t.output, r.stdout) : 0;
@@ -505,7 +508,14 @@ function renderProblem(id) {
     const runLang = lang;
     customOut.innerHTML = `<p class="muted" style="margin:0">${LANGS[runLang].label}로 실행 중이에요…</p>`;
     try {
-      const r = await runCustom(runLang, docs[runLang].getValue(), stdinEl.value);
+      const r = await runCustom(runLang, docs[runLang].getValue(), stdinEl.value, {
+        onWait: (sec) => {
+          if (alive) customOut.innerHTML = `<p class="muted" style="margin:0">Wandbox는 1분에 약 ${RATE_LIMIT}번까지만 실행할 수 있어요. ${sec}초 후 실행해요…</p>`;
+        },
+        onSend: () => {
+          if (alive) customOut.innerHTML = `<p class="muted" style="margin:0">${LANGS[runLang].label}로 실행 중이에요…</p>`;
+        },
+      });
       if (!alive) return;
       if (r.kind === 'service') {
         customOut.innerHTML = `<div class="msg msg-service">실행 서비스에 연결하지 못했어요. 잠시 후 다시 시도해 주세요. <span class="muted">(${esc(r.message)})</span></div>`;

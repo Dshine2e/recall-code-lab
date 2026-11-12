@@ -80,6 +80,8 @@ async function shot(page, name) {
   const base = `http://127.0.0.1:${server.address().port}${PREFIX}`;
   const browser = await chromium.launch({ channel: process.env.CHROME_CHANNEL || 'chrome' });
   const ctx = await browser.newContext({ viewport: { width: 1360, height: 900 } });
+  // 이 컨텍스트는 목에 요청을 많이 보내므로 요청 제한을 사실상 끈다(제한 자체는 아래 "요청 제한" 절에서 확인).
+  await ctx.addInitScript(() => { window.__RECALL_RATE__ = { limit: 100000 }; });
   await ctx.route('https://wandbox.org/api/compile.json', async (route) => {
     const body = JSON.parse(route.request().postData());
     mock.calls.push(body);
@@ -295,6 +297,55 @@ async function shot(page, name) {
   check(await noScroll(), '결과 펼쳐도 가로 스크롤 없음');
   await shot(mp, '04-mobile-solve');
   await m.close();
+
+  console.log('== 요청 제한(테스트용으로 3초에 3회로 줄임)');
+  const rl = await browser.newContext();
+  await rl.addInitScript(() => { window.__RECALL_RATE__ = { limit: 3, windowMs: 3000, penaltyMs: 1500 }; });
+  const rlLog = [];
+  const rlSeen = new Set();
+  let rlMode = null;
+  await rl.route('https://wandbox.org/api/compile.json', (route) => {
+    const body = JSON.parse(route.request().postData());
+    const key = `${body.compiler}|${body.stdin}`;
+    const first = !rlSeen.has(key);
+    rlSeen.add(key);
+    rlLog.push({ t: Date.now(), key, status: rlMode === '429-once' && first ? 429 : 200 });
+    if (rlMode === '429-once' && first) return route.fulfill({ status: 429, body: 'slow down' });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fakeWandbox(body)) });
+  });
+  const rp = await rl.newPage();
+  rp.on('pageerror', (e2) => errors.push(`[rate] ${e2}`));
+  rp.on('console', (msg) => { if (msg.type() === 'error' && !/status of 429/.test(msg.text())) errors.push(`[rate] ${msg.text()}`); });
+  await rp.goto(`${base}#p/daily-2026-11-12-1`);
+  await rp.waitForSelector('.CodeMirror');
+  await rp.evaluate((c) => document.querySelector('.CodeMirror').CodeMirror.setValue(c), PY_SOL('daily-2026-11-12-1'));
+  let sawWait = false;
+  const waitWatch = setInterval(async () => { try { if (await rp.$('.msg-wait') && await rp.$('.v-waiting')) sawWait = true; } catch { /* 닫힘 */ } }, 100);
+  await rp.click('#run-all');
+  await rp.waitForFunction(() => !document.querySelector('#run-all').disabled && document.querySelector('.score strong'), null, { timeout: 60000 });
+  clearInterval(waitWatch);
+  const maxIn = (log, ms) => Math.max(...log.map((a) => log.filter((b) => b.t >= a.t && b.t < a.t + ms).length));
+  check(await rp.evaluate(() => document.querySelector('.score strong').classList.contains('pass-all')), '제한을 지키며 5개 모두 실행·통과');
+  // 브라우저가 보낸 시각과 목이 받은 시각 사이의 흔들림(수십 ms)을 감안해 2.9초 구간으로 센다.
+  // 실제 설정은 Wandbox 창(약 60초)보다 2초 넉넉한 62초다.
+  const gaps = rlLog.slice(1).map((x, i) => x.t - rlLog[i].t).join(',');
+  check(maxIn(rlLog, 2900) <= 3, '어느 3초 구간에도 요청 3개 이하', `요청 ${rlLog.length}개, 간격 ${gaps}ms`);
+  check(sawWait, '기다리는 동안 "대기"와 안내 문구 표시');
+
+  rlMode = '429-once';
+  rlSeen.clear();
+  rlLog.length = 0;
+  await rp.evaluate(() => { try { localStorage.removeItem('recall-wandbox-log-v1'); } catch { /* */ } });
+  await rp.click('.lang-tabs [data-lang="cpp"]');
+  await rp.evaluate((c) => document.querySelector('.CodeMirror').CodeMirror.setValue(c), fs.readFileSync(path.join(ROOT, '.solutions', 'daily-2026-11-12-1.cpp'), 'utf8'));
+  await rp.click('#run-all');
+  await rp.waitForFunction(() => !document.querySelector('#run-all').disabled && document.querySelector('.score strong'), null, { timeout: 90000 });
+  const firstRetry = rlLog.findIndex((x) => x.status === 200);
+  const first429 = rlLog.find((x) => x.status === 429);
+  check(await rp.evaluate(() => document.querySelector('.score strong').classList.contains('pass-all')), '429 뒤 기다렸다 1회 재시도해 모두 통과', `요청 ${rlLog.length}개`);
+  check(rlLog.length === 10, '429는 테스트당 1회만 재시도');
+  check(firstRetry > 0 && rlLog[firstRetry].t - first429.t >= 1400, '429 뒤 바로 다시 보내지 않음', `${firstRetry > 0 ? rlLog[firstRetry].t - first429.t : '?'}ms 뒤 재시도`);
+  await rl.close();
 
   console.log('== 저장소를 쓸 수 없는 브라우저');
   const ns = await browser.newContext();

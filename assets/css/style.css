@@ -265,7 +265,7 @@ pre, code, textarea.mono { font-family: var(--mono); }
 .verdict { flex: 0 0 auto; font-weight: 700; font-size: 12px; padding: 1px 8px; border-radius: 999px; }
 .v-pass { background: var(--mint); color: var(--green); }
 .v-fail, .v-error, .v-compile, .v-timeout { background: var(--rose); color: var(--red); }
-.v-service, .v-pending, .v-running, .v-skipped { background: #f0f3ef; color: var(--muted); }
+.v-service, .v-pending, .v-waiting, .v-running, .v-skipped { background: #f0f3ef; color: var(--muted); }
 .v-running { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .45; } }
 .result-detail { padding: 4px 12px 12px; display: grid; gap: 8px; border-top: 1px dashed var(--line); }
@@ -281,6 +281,7 @@ pre, code, textarea.mono { font-family: var(--mono); }
 .msg { padding: 10px 12px; border-radius: 10px; font-size: 13.5px; }
 .msg-service { background: var(--sand); color: #6f4e20; }
 .msg-error { background: var(--rose); color: #8c3a35; }
+.msg-wait { background: #f0f3ef; color: var(--muted); }
 .custom-out { display: grid; gap: 6px; }
 .custom-out h4 { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
 .muted { color: var(--muted); }
