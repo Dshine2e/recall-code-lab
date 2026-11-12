@@ -27,7 +27,12 @@
       }
     ],
     "python": "from collections import deque\nn, m = map(int, input().split())\na = [input().strip() for _ in range(n)]\nq = deque([(0, 0, 1)]) if a[0][0] == \"1\" else deque()\nseen = {(0, 0)}\nanswer = -1\nwhile q:\n    x, y, d = q.popleft()\n    if (x, y) == (n-1, m-1):\n        answer = d\n        break\n    for dx, dy in [(1,0), (-1,0), (0,1), (0,-1)]:\n        nx, ny = x+dx, y+dy\n        if 0 <= nx < n and 0 <= ny < m and a[nx][ny] == \"1\" and (nx,ny) not in seen:\n            seen.add((nx,ny))\n            q.append(nx, ny, d+1)\nprint(answer)",
-    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n,m; cin>>n>>m; vector<string> a(n); for(auto &s:a) cin>>s;\n  queue<tuple<int,int,int>> q; set<pair<int,int>> seen;\n  if(a[0][0]=='1') {q.push({0,0,1}); seen.insert({0,0});}\n  int ans=-1; int dx[]={1,-1,0,0},dy[]={0,0,1,-1};\n  while(!q.empty()){auto [x,y,d]=q.front(); q.pop();\n    if(x==n-1 && y==m-1){ans=d; break;}\n    for(int k=0;k<4;k++){int nx=x+dx[k],ny=y+dy[k];\n      if(nx>=0 && nx<n && ny>=0 && ny<m && a[nx][ny]=='1' && !seen.count({nx,ny})) {seen.insert({nx,ny}); q.push({nx,ny,d+1});}\n    }\n  } cout<<ans;\n}\n"
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n,m; cin>>n>>m; vector<string> a(n); for(auto &s:a) cin>>s;\n  queue<tuple<int,int,int>> q; set<pair<int,int>> seen;\n  if(a[0][0]=='1') {q.push({0,0,1}); seen.insert({0,0});}\n  int ans=-1; int dx[]={1,-1,0,0},dy[]={0,0,1,-1};\n  while(!q.empty()){auto [x,y,d]=q.front(); q.pop();\n    if(x==n-1 && y==m-1){ans=d; break;}\n    for(int k=0;k<4;k++){int nx=x+dx[k],ny=y+dy[k];\n      if(nx>=0 && nx<n && ny>=0 && ny<m && a[nx][ny]=='1' && !seen.count({nx,ny})) {seen.insert({nx,ny}); q.push({nx,ny,d+1});}\n    }\n  } cout<<ans;\n}\n",
+    "hints": [
+      "가중치가 없는 격자에서 최소 칸 수를 구하는 문제라서 BFS(너비 우선 탐색)가 맞아요. BFS는 출발점에서 가까운 칸부터 차례로 방문하므로, 어떤 칸에 처음 도착했을 때의 거리가 곧 최단 거리예요. 파이썬은 collections의 deque, C++는 queue를 큐로 써요.",
+      "출발 칸을 거리 1로 큐에 넣고, 큐에서 칸을 하나씩 꺼내 상하좌우 네 이웃을 살펴요. 격자 안에 있고, 1인 칸이고, 아직 방문하지 않은 이웃만 거리를 하나 늘려 큐에 넣으면서 바로 방문 표시를 해요. 큐가 빌 때까지 도착 칸에 닿지 못했다면 -1을 출력해요.",
+      "출발 칸이 0인 경우와 출발이 곧 도착인 1×1 격자를 따로 확인하세요. 시작 코드에는 일부러 넣은 오류가 있으니, 실행해서 실패한 테스트의 메시지를 단서로 삼으세요. 각 칸을 한 번씩만 방문하므로 목표 시간 복잡도는 O(n·m)이에요."
+    ]
   },
   {
     "id": "dfs",
@@ -57,7 +62,12 @@
       }
     ],
     "python": "n, m = map(int, input().split())\ng = [[] for _ in range(n)]\nfor _ in range(m):\n    u,v = map(int, input().split())\n    g[u].append(v); g[v].append(u)\nseen = set()\ncount = 0\nfor root in range(n):\n    if root in seen: continue\n    count += 1\n    stack = [root]\n    while stack:\n        u = stack.pop()\n        if u in seen: continue\n        seen.add(u)\n        stack.extend(g[u])\nprint(count)",
-    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n,m; cin>>n>>m; vector<vector<int>> g(n);\n  while(m--){int u,v;cin>>u>>v;g[u].push_back(v);g[v].push_back(u);}\n  vector<bool> seen(n);int count=0;\n  for(int r=0;r<n;r++){if(seen[r])continue;count++;stack<int> st;st.push(r);\n    while(!st.empty()){int u=st.top();st.pop();if(seen[u])continue;seen[u]=true;for(int v:g[u])st.push(v);}}\n  cout<<count;\n}\n"
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n,m; cin>>n>>m; vector<vector<int>> g(n);\n  while(m--){int u,v;cin>>u>>v;g[u].push_back(v);g[v].push_back(u);}\n  vector<bool> seen(n);int count=0;\n  for(int r=0;r<n;r++){if(seen[r])continue;count++;stack<int> st;st.push(r);\n    while(!st.empty()){int u=st.top();st.pop();if(seen[u])continue;seen[u]=true;for(int v:g[u])st.push(v);}}\n  cout<<count;\n}\n",
+    "hints": [
+      "정점들이 몇 덩어리로 나뉘는지 세는 문제라서 그래프 탐색(DFS나 BFS)으로 연결 요소를 세면 돼요. 한 정점에서 탐색을 시작하면 그 정점과 이어진 모든 정점을 한 번에 방문할 수 있기 때문이에요. 간선은 인접 리스트로 저장하고, 무방향이니 양쪽 정점에 모두 넣어요.",
+      "0번부터 n-1번 정점까지 차례로 보면서, 아직 방문하지 않은 정점을 만나면 개수를 하나 늘리고 거기서 탐색을 시작해요. 탐색은 스택이나 재귀로 이웃을 따라가며 닿는 정점마다 방문 표시를 남겨요. 모든 정점을 다 본 뒤의 개수가 답이에요.",
+      "간선이 하나도 없는 고립 정점도 각각 한 덩어리로 세야 하고, 사이클이 있을 때 방문 표시가 없으면 같은 정점을 끝없이 다시 보게 돼요. 재귀 DFS는 정점이 많으면 재귀 깊이 제한에 걸릴 수 있어 반복문과 스택이 더 안전해요. 목표 시간 복잡도는 O(n + m)이에요."
+    ]
   },
   {
     "id": "hash",
@@ -87,7 +97,12 @@
       }
     ],
     "python": "n = int(input())\ncounts = {}\nfor _ in range(n):\n    word = input().strip()\n    counts[word] = counts.get(word, 0) + 1\nprint(min(counts, key=lambda w: (-counts[w], w)))",
-    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;map<string,int> counts;while(n--){string s;cin>>s;counts[s]++;}\n  string answer;int best=0;for(auto [s,c]:counts)if(c>best){answer=s;best=c;}cout<<answer;\n}\n"
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;map<string,int> counts;while(n--){string s;cin>>s;counts[s]++;}\n  string answer;int best=0;for(auto [s,c]:counts)if(c>best){answer=s;best=c;}cout<<answer;\n}\n",
+    "hints": [
+      "단어마다 몇 번 나왔는지 세야 하므로 해시(파이썬 dict나 Counter, C++ map이나 unordered_map)가 알맞아요. 단어를 키로, 등장 횟수를 값으로 두면 같은 단어를 만날 때마다 바로 찾아 횟수를 늘릴 수 있어요.",
+      "먼저 모든 단어를 읽으면서 횟수를 다 센 뒤에, 가장 큰 횟수를 가진 단어를 골라요. 횟수가 같은 단어가 여럿이면 사전순으로 가장 앞선 단어를 골라야 하니, 횟수는 클수록 단어는 사전순으로 앞설수록 우선하도록 기준을 두 개로 잡아요.",
+      "동률 처리를 빠뜨리면 입력 순서에 따라 답이 달라져요. C++의 map은 키를 사전순으로 순회하므로 횟수가 더 클 때만 갱신하면 동률에서 앞선 단어가 남지만, unordered_map은 순회 순서가 정해져 있지 않아 단어도 직접 비교해야 해요. 목표 시간 복잡도는 단어 수 n에 대해 O(n log n) 이하예요."
+    ]
   },
   {
     "id": "heap",
@@ -117,7 +132,12 @@
       }
     ],
     "python": "import heapq\nn = int(input())\nh = list(map(int, input().split()))\nh = heapq.heapify(h)\nanswer = []\nwhile h:\n    answer.append(heapq.heappop(h))\nprint(*answer)",
-    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;priority_queue<int> h;while(n--){int x;cin>>x;h.push(x);}\n  while(!h.empty()){cout<<h.top()<<\" \";h.pop();}\n}\n"
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;priority_queue<int> h;while(n--){int x;cin>>x;h.push(x);}\n  while(!h.empty()){cout<<h.top()<<\" \";h.pop();}\n}\n",
+    "hints": [
+      "작은 값부터 차례로 꺼내야 하므로 최소 힙이 맞는 자료구조예요. 힙은 가장 작은 원소를 빠르게 꺼낼 수 있어서, 원소를 모두 넣은 뒤 하나씩 꺼내면 자연스럽게 오름차순이 돼요. 파이썬은 heapq 모듈, C++는 priority_queue로 힙을 다뤄요.",
+      "먼저 n개의 정수를 모두 읽어 힙으로 만들어요. 그다음 힙이 빌 때까지 맨 위 원소를 꺼내 결과 목록에 차례로 붙이고, 마지막에 공백으로 이어 한 줄로 출력해요.",
+      "n이 0이면 둘째 줄이 비어 있을 수 있으니 빈 줄만 출력되는지 확인하세요. 시작 코드에는 일부러 넣은 오류가 있으니, 실행해서 실패한 테스트의 메시지를 단서로 삼으세요. 원소마다 넣고 꺼내는 데 로그 시간이 들어 목표 시간 복잡도는 O(n log n)이에요."
+    ]
   },
   {
     "id": "deque",
@@ -147,7 +167,12 @@
       }
     ],
     "python": "from collections import deque\nn,k = map(int, input().split())\nd = deque(range(1,n+1))\nd.rotate(k)\nprint(*d)",
-    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n,k;cin>>n>>k;deque<int>d;for(int i=1;i<=n;i++)d.push_back(i);\n  if(n)for(int i=0;i<k%n;i++){int x=d.back();d.pop_back();d.push_front(x);}for(int x:d)cout<<x<<\" \";\n}\n"
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n,k;cin>>n>>k;deque<int>d;for(int i=1;i<=n;i++)d.push_back(i);\n  if(n)for(int i=0;i<k%n;i++){int x=d.back();d.pop_back();d.push_front(x);}for(int x:d)cout<<x<<\" \";\n}\n",
+    "hints": [
+      "양 끝에서 원소를 빼고 넣는 일이 반복되므로 덱(deque)이 알맞아요. 덱은 앞과 뒤 모두에서 넣고 빼는 연산이 빨라서, 맨 뒤 원소를 맨 앞으로 옮기는 회전을 그대로 흉내 낼 수 있어요. 파이썬 collections.deque에는 rotate 함수도 있어요.",
+      "1부터 n까지 차례로 덱에 넣어요. 오른쪽으로 한 칸 회전은 맨 뒤 원소를 꺼내 맨 앞에 넣는 것과 같고, n번 회전하면 원래대로 돌아오므로 k를 n으로 나눈 나머지만큼만 돌리면 돼요. 마지막에 덱의 원소를 앞에서부터 공백으로 이어 출력해요.",
+      "n이 0일 때 나머지를 구하면 0으로 나누는 오류가 나니 빈 덱은 따로 처리하세요. k가 n보다 큰 경우도 테스트에 있어요. 나머지만큼만 돌리면 목표 시간 복잡도는 O(n)이에요."
+    ]
   },
   {
     "id": "sort",
@@ -177,7 +202,12 @@
       }
     ],
     "python": "n = int(input())\na = [tuple(map(int,input().split())) for _ in range(n)]\nresult = a.sort(key=lambda x:(x[0],-x[1]))\nfor row in result:\n    print(*row)",
-    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;vector<pair<int,int>>a(n);for(auto &[x,y]:a)cin>>x>>y;\n  sort(a.begin(),a.end(),[](auto x,auto y){return x.first!=y.first?x.first<y.first:x.second>y.second;});for(auto [x,y]:a)cout<<x<<\" \"<<y<<\"\\n\";\n}\n"
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;vector<pair<int,int>>a(n);for(auto &[x,y]:a)cin>>x>>y;\n  sort(a.begin(),a.end(),[](auto x,auto y){return x.first!=y.first?x.first<y.first:x.second>y.second;});for(auto [x,y]:a)cout<<x<<\" \"<<y<<\"\\n\";\n}\n",
+    "hints": [
+      "기준이 두 개인 정렬 문제라서 내장 정렬에 비교 기준을 직접 넘기는 방식이 맞아요. 파이썬은 key 인자로 정렬 기준을 주고, C++는 sort에 비교 함수를 넘기면 돼요.",
+      "첫 기준 a는 오름차순, a가 같을 때의 둘째 기준 b는 내림차순이에요. 파이썬에서는 key로 두 값을 묶되 b 쪽은 부호를 뒤집으면 한 번에 정렬되고, C++에서는 a가 다르면 a로, 같으면 b가 큰 쪽이 앞에 오도록 비교해요. 정렬이 끝나면 한 쌍씩 줄마다 출력해요.",
+      "a와 b가 모두 같은 쌍이 여러 개여도 빠짐없이 출력돼야 하고, n이 0이면 아무것도 출력하지 않아요. 시작 코드에는 일부러 넣은 오류가 있으니, 실행해서 실패한 테스트의 메시지를 단서로 삼으세요. 목표 시간 복잡도는 O(n log n)이에요."
+    ]
   },
   {
     "id": "string",
@@ -207,7 +237,12 @@
       }
     ],
     "python": "s = input()\nprint(\"-\".join(s.split()))",
-    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  string s,w,result;getline(cin,s);istringstream in(s);while(in>>w){if(!result.empty())result+=\"-\";result+=w;}cout<<result;\n}\n"
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  string s,w,result;getline(cin,s);istringstream in(s);while(in>>w){if(!result.empty())result+=\"-\";result+=w;}cout<<result;\n}\n",
+    "hints": [
+      "공백을 기준으로 단어를 나눈 뒤 다시 이어 붙이는 문자열 처리 문제예요. 파이썬의 split은 인자 없이 쓰면 연속된 공백과 양끝 공백을 알아서 무시하고, join으로 원하는 구분자를 넣어 이을 수 있어요. C++에서는 getline으로 한 줄을 통째로 읽고 istringstream으로 단어를 하나씩 꺼내요.",
+      "한 줄 전체를 읽어서 공백이 아닌 덩어리, 즉 단어만 순서대로 모아요. 모은 단어들을 하이픈으로 이어 붙이는데, 첫 단어 앞이나 마지막 단어 뒤에는 하이픈이 붙지 않아야 해요. 단어가 하나도 없으면 결과는 빈 문자열이에요.",
+      "공백 문자 하나를 기준으로 직접 자르면(파이썬에서 split에 공백을 인자로 주는 경우 등) 연속 공백 사이에 빈 단어가 생겨 하이픈이 겹쳐요. 입력이 공백뿐일 때도 오류 없이 빈 줄이 나오는지 확인하세요. 목표 시간 복잡도는 줄 길이에 비례하는 O(L)이에요."
+    ]
   },
   {
     "id": "index",
@@ -237,6 +272,11 @@
       }
     ],
     "python": "n = int(input())\na = list(map(int, input().split()))\ntotal = 0\nfor i in range(n + 1):\n    total += a[i]\nprint(total)",
-    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;vector<int>a(n);for(int &x:a)cin>>x;long long total=0;\n  for(int i=0;i<=n;i++)total+=a.at(i);cout<<total;\n}\n"
+    "cpp": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false); cin.tie(nullptr);\n  int n;cin>>n;vector<int>a(n);for(int &x:a)cin>>x;long long total=0;\n  for(int i=0;i<=n;i++)total+=a.at(i);cout<<total;\n}\n",
+    "hints": [
+      "배열을 처음부터 끝까지 한 번 훑으며 값을 더하는 단순 순회 문제예요. 핵심은 알고리즘보다 인덱스가 유효한 범위 안에서만 움직이는지 점검하는 데 있어요. 파이썬은 sum 같은 내장 함수를 써도 되고, C++는 반복문과 누적 변수를 써요.",
+      "n을 읽고 이어서 n개의 정수를 읽은 다음, 각 원소를 빠짐없이 한 번씩 누적 변수에 더해요. 다 더한 값을 출력하면 끝이에요.",
+      "n이 0이면 둘째 줄이 비어 있을 수 있으니 빈 배열에서도 0이 나오는지 확인하세요. 시작 코드에는 일부러 넣은 오류가 있으니, 실행해서 실패한 테스트의 메시지를 단서로 삼으세요. 목표 시간 복잡도는 O(n)이에요."
+    ]
   }
 ]
