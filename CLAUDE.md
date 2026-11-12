@@ -46,7 +46,7 @@ GitHub Pages(main / 루트)로 배포하는 빌드 없는 정적 사이트(HTML/
 ```
 { "slug": "binary-search", "title": "이분 탐색", "category": "탐색", "order": 1,
   "summary": "한 줄 요약", "when": ["이럴 때 써요", ...],
-  "topics": ["이분 탐색", ...],            // 문제 topic 에 이 문자열이 들어 있으면 관련 문제로 연결(대소문자 무시)
+  "topics": ["이분 탐색", "=정렬", ...],   // 문제 topic 에 이 문자열이 들어 있으면 관련 문제로 연결(대소문자 무시). '='로 시작하면 topic 이 정확히 같을 때만
   "python": { "items": [{ "name", "signature", "does", "when", "complexity" }],
               "examples": [{ "title", "code"(완전한 프로그램), "stdin"(선택), "output" }],
               "pitfalls": [{ "wrong", "right", "why" }] },

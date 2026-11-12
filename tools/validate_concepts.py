@@ -252,9 +252,19 @@ def load_problem_topics() -> list[tuple[str, str]]:
 
 
 def related(topic: str, concept_topics: list[str]) -> bool:
-    """사이트와 같은 규칙: 개념의 topics 문자열 중 하나가 문제 topic 안에 들어 있으면 관련 문제다(대소문자 무시)."""
-    t = topic.lower()
-    return any(ct.lower() in t for ct in concept_topics if isinstance(ct, str) and ct.strip())
+    """사이트와 같은 규칙(대소문자 무시): 개념의 topics 문자열 중 하나가 문제 topic 안에 들어 있으면 관련 문제다.
+    '='로 시작하는 항목은 문제 topic 과 정확히 같을 때만 연결한다(예: '=정렬' 은 '위상 정렬'과 연결되지 않음)."""
+    t = topic.strip().lower()
+    for ct in concept_topics:
+        if not (isinstance(ct, str) and ct.strip()):
+            continue
+        c = ct.strip().lower()
+        if c.startswith("="):
+            if t == c[1:].strip():
+                return True
+        elif c in t:
+            return True
+    return False
 
 
 def main() -> int:
