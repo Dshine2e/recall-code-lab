@@ -3,7 +3,8 @@
 // 형식:
 // {
 //   version: 1,
-//   lang: 'python' | 'cpp',                       // 마지막으로 고른 언어
+//   lang: 'python' | 'cpp',                       // 마지막으로 고른 언어(개념서와 공유)
+//   showTopics: boolean,                          // 보관함 "주제 표시" 토글(없으면 false)
 //   problems: {
 //     [id]: {
 //       status: 'unsolved' | 'review' | 'solved',
@@ -12,9 +13,14 @@
 //       drafts: { python?: string, cpp?: string }, // 코드 초안
 //       lastResult: { at, lang, passed, total, serviceErrors, compileError, results: [...] },
 //       attempts: [{ at, lang, passed, total, verdict: 'pass'|'fail'|'compile' }]  // 최근 50개, 나중에 오답 노트/복습에 쓴다
+//       hintLevel: 0~3,                            // 지금까지 연 힌트 단계(연 단계는 계속 보인다)
+//       hintOpenedAt: [ISO, ...],                  // 단계별로 연 시각
+//       hintUsed: boolean,                         // 해결 전에 힌트를 열었음 → 통과해도 '복습 필요'
+//       hintUsedAt: ISO                            // hintUsed 가 된 시각
 //     }
 //   }
 // }
+// 새 필드가 없는 예전 데이터도 그대로 읽는다(없으면 0/false 로 본다).
 
 const KEY = 'recall-state-v1';
 const MAX_ATTEMPTS = 50;
@@ -145,4 +151,66 @@ export function counts(ids) {
   const out = { unsolved: 0, review: 0, solved: 0 };
   for (const id of ids) out[getStatus(id)] += 1;
   return out;
+}
+
+// ---- 힌트
+
+export const HINT_LEVELS = 3;
+
+export function getHint(id) {
+  const e = state.problems[id];
+  const level = Number.isInteger(e?.hintLevel) ? Math.max(0, Math.min(HINT_LEVELS, e.hintLevel)) : 0;
+  return {
+    level,
+    used: e?.hintUsed === true,
+    usedAt: e?.hintUsedAt || null,
+    openedAt: Array.isArray(e?.hintOpenedAt) ? e.hintOpenedAt.slice(0, level) : [],
+  };
+}
+
+/**
+ * 다음 힌트 단계를 연다. 해결 전에 열면 hintUsed 를 켜고 상태를 '복습 필요'로 바꾼다.
+ * 이미 '해결'인 문제는 상태를 그대로 둔다. 반환: 새 단계
+ */
+export function openNextHint(id) {
+  const e = entry(id);
+  const level = getHint(id).level;
+  if (level >= HINT_LEVELS) return level;
+  const now = new Date().toISOString();
+  e.hintLevel = level + 1;
+  e.hintOpenedAt = [...(Array.isArray(e.hintOpenedAt) ? e.hintOpenedAt.slice(0, level) : []), now];
+  if (getStatus(id) !== 'solved') {
+    if (!e.hintUsed) { e.hintUsed = true; e.hintUsedAt = now; }
+    if (e.status !== 'review') { e.status = 'review'; e.statusAt = now; }
+  }
+  save();
+  return e.hintLevel;
+}
+
+/** "힌트 없이 다시 풀었어요": hintUsed 를 풀고 '해결'로 바꾼다(연 힌트 단계는 남겨 둔다). */
+export function clearHintUsed(id) {
+  const e = entry(id);
+  e.hintUsed = false;
+  delete e.hintUsedAt;
+  save();
+}
+
+/** 해결 전이고 힌트도 열지 않은 문제는 주제(topic·syntax)를 숨긴다. */
+export function topicRevealed(id) {
+  return state.showTopics === true || getStatus(id) === 'solved' || getHint(id).level >= 1;
+}
+
+/** 풀이 여부 필터용: 힌트를 쓴 문제는 '복습 필요'로 본다. */
+export function filterStatus(id) {
+  const s = getStatus(id);
+  return s !== 'solved' && getHint(id).used ? 'review' : s;
+}
+
+export function getShowTopics() {
+  return state.showTopics === true;
+}
+
+export function setShowTopics(on) {
+  state.showTopics = on === true;
+  save();
 }

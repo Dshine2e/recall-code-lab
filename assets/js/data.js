@@ -86,3 +86,41 @@ export function parseDescription(desc) {
 export function paragraphs(text) {
   return String(text || '').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
 }
+
+// ------------------------------------------------------------------ 개념서
+
+let conceptIndex = null;
+const conceptCache = new Map();
+
+/** concepts/manifest.json → [{ slug, title, category, summary, topics }] (실패하면 예외) */
+export async function loadConceptIndex() {
+  if (!conceptIndex) {
+    conceptIndex = fetchJson('concepts/manifest.json')
+      .then((m) => (Array.isArray(m?.concepts) ? m.concepts.filter((c) => c && typeof c.slug === 'string') : []))
+      .catch((err) => { conceptIndex = null; throw err; });
+  }
+  return conceptIndex;
+}
+
+export async function loadConcept(slug) {
+  if (!conceptCache.has(slug)) {
+    const p = fetchJson(`concepts/${encodeURIComponent(slug)}.json`).catch((err) => { conceptCache.delete(slug); throw err; });
+    conceptCache.set(slug, p);
+  }
+  return conceptCache.get(slug);
+}
+
+/**
+ * 문제 topic 과 개념 topics 연결 규칙(tools/validate_concepts.py 의 related() 와 같음, 대소문자 무시):
+ * 개념의 topics 문자열 중 하나가 문제 topic 안에 들어 있으면 관련. '='로 시작하면 정확히 같을 때만.
+ */
+export function topicRelates(topic, conceptTopics) {
+  const t = String(topic || '').trim().toLowerCase();
+  if (!t || !Array.isArray(conceptTopics)) return false;
+  return conceptTopics.some((raw) => {
+    const c = String(raw || '').trim().toLowerCase();
+    if (!c) return false;
+    if (c.startsWith('=')) return t === c.slice(1).trim();
+    return t.includes(c);
+  });
+}

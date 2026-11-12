@@ -65,6 +65,17 @@ function check(cond, name, extra = '') {
   console.log(`${cond ? '  ok ' : '  FAIL'} ${name}${extra ? ` — ${extra}` : ''}`);
   if (!cond) failures += 1;
 }
+// 기대값을 데이터에서 계산한다(문제가 늘어도 테스트가 그대로 맞게).
+const readJson = (rel) => JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
+const ALL = readJson('problems/manifest.json').files.flatMap((f) => readJson(`problems/${f}`));
+const BY_ID = new Map(ALL.map((p) => [p.id, p]));
+const CONCEPTS = readJson('concepts/manifest.json').concepts;
+// 사이트·validate_concepts.py 와 같은 연결 규칙
+const relates = (topic, topics) => (topics || []).some((raw) => {
+  const c = String(raw).trim().toLowerCase();
+  const t = String(topic).trim().toLowerCase();
+  return c.startsWith('=') ? t === c.slice(1).trim() : c && t.includes(c);
+});
 const PY_SOL = (id) => fs.readFileSync(path.join(ROOT, '.solutions', `${id}.py`), 'utf8');
 const CPP_SOL = (id) => fs.readFileSync(path.join(ROOT, '.solutions', `${id}.cpp`), 'utf8');
 
@@ -113,8 +124,15 @@ async function shot(page, name) {
   const sortedDated = [...dated].sort((a, b) => (a.slice(6, 16) === b.slice(6, 16) ? a.localeCompare(b) : b.localeCompare(a)));
   check(JSON.stringify(dated) === JSON.stringify(sortedDated), '최신 날짜 먼저, 같은 날은 1→3');
   check((await page.textContent('#count')).includes(`총 ${rows.length}개 문제`), '"총 N개 문제" 표시');
+  check(rows.length === ALL.length, 'manifest 의 문제 전부 표시', `${rows.length}/${ALL.length}`);
+  const addedOrder = rows.map((id) => BY_ID.get(id).addedOn);
+  const firstNull = addedOrder.indexOf(null);
+  const datedPart = firstNull < 0 ? addedOrder : addedOrder.slice(0, firstNull);
+  check(datedPart.every((d, i) => i === 0 || datedPart[i - 1] >= d) && (firstNull < 0 || addedOrder.slice(firstNull).every((d) => d === null)),
+    'addedOn 내림차순, null 은 맨 뒤');
   const firstRow = await page.textContent('.problem-row');
-  check(/약 \d+분/.test(firstRow) && /문법 ·/.test(firstRow), '행에 문법·소요 시간 표시');
+  check(/약 \d+분/.test(firstRow) && !/문법 ·/.test(firstRow) && firstRow.includes('주제 숨김'), '처음에는 주제·문법 숨김, 소요 시간 표시');
+  check(!(await page.isChecked('#show-topics')), '"주제 표시" 기본 꺼짐');
   check(await page.isVisible('.problem-row .badge.diff-입문, .problem-row .badge.diff-기본'), '난이도 배지');
   await shot(page, '01-archive');
 
@@ -122,11 +140,20 @@ async function shot(page, name) {
   await page.selectOption('#f-category', '기본기');
   check(await count() === 8, '유형 필터: 기본기 8개');
   await page.selectOption('#f-category', '');
+  const expectSearch = (word, revealed) => ALL.filter((p) => (revealed ? `${p.title} ${p.topic} ${p.syntax}` : p.title).toLowerCase().includes(word)).length;
   await page.fill('#f-q', '이분');
-  check(await count() === 1, '검색: "이분" → 1개');
+  check(await count() === expectSearch('이분', false), '주제 숨김 중 검색은 제목만', `${await count()}개`);
+  await page.click('label.switch');
+  check(await count() === expectSearch('이분', true), '주제 표시 후 검색: "이분"', `${await count()}개`);
   await page.fill('#f-q', 'long long');
   check(await count() >= 1, '검색: 문법 텍스트');
   await page.fill('#f-q', '');
+  check(/문법 ·/.test(await page.textContent('.problem-row')) && !(await page.textContent('.problem-row')).includes('주제 숨김'), '주제 표시 토글: 주제·문법 보임');
+  await page.reload();
+  await page.waitForSelector('.problem-row');
+  check(await page.isChecked('#show-topics'), '주제 표시 토글 상태 저장');
+  await page.click('label.switch');
+  check((await page.textContent('.problem-row')).includes('주제 숨김'), '토글 끄면 다시 숨김');
   await page.selectOption('#f-difficulty', '입문');
   const intro = await count();
   check(intro >= 5, '난이도 필터: 입문', `${intro}개`);
@@ -135,7 +162,7 @@ async function shot(page, name) {
   await page.click('#reset-filters');
   check(await count() === rows.length, '필터 초기화');
   await page.selectOption('#f-syntax', 'append 인자');
-  check(await count() === 1, '문법 유형 필터: append 인자 → bfs');
+  check(await count() === ALL.filter((p) => p.syntax.split(/[,，]/).map((s) => s.trim()).includes('append 인자')).length, '주제 숨김 중에도 문법 유형 필터 동작');
   await page.selectOption('#f-status', 'solved');
   check(await page.isVisible('.empty-state'), '결과 없음 안내');
   await page.click('.empty-state [data-reset]');
@@ -147,7 +174,9 @@ async function shot(page, name) {
   check(page.url().endsWith('#p/daily-2026-11-11-2'), '해시 라우팅');
   const heads = await page.$$eval('.statement h2', (e) => e.map((x) => x.textContent));
   check(JSON.stringify(heads) === JSON.stringify(['제약', '입력 형식', '출력 형식', '예제']), '섹션 분리', heads.join(','));
-  check(await page.$$eval('.meta-chip', (e) => e.length) === 5, '메타 칩 5개');
+  const chips = await page.$$eval('.meta-chip', (e) => e.map((x) => x.textContent));
+  check(chips.length === 4 && chips.some((t) => t.includes('주제 숨김')) && !chips.some((t) => t.startsWith('핵심 문법')), '해결 전: [알고리즘 주제]/[핵심 문법] 칩 숨김', chips.join(' | '));
+  check(await page.isVisible('#head-topic .tag-hidden'), '해결 전: 머리의 주제 태그 숨김');
   check(await page.$$eval('.statement ul li', (e) => e.length) >= 3, '제약 목록');
   const exIn = await page.textContent('.example pre');
   check(exIn.startsWith('5\n-10 0 3 8 15'), '예제 입력 = 첫 테스트');
@@ -168,7 +197,9 @@ async function shot(page, name) {
   await page.click('#run-all');
   await page.waitForFunction(() => document.querySelector('.score strong')?.classList.contains('pass-all'), null, { timeout: 60000 });
   check((await page.textContent('.score strong')) === '4/4 통과', 'Python 정답 4/4 통과');
-  check(await page.$eval('#status-switch [data-status="solved"]', (b) => b.getAttribute('aria-pressed')) === 'true', '전부 통과 → 상태 "해결"');
+  check(await page.$eval('#status-switch [data-status="solved"]', (b) => b.getAttribute('aria-pressed')) === 'true', '힌트 없이 전부 통과 → 상태 "해결"');
+  check(!(await page.isVisible('.msg-hint')), '힌트 없이 통과하면 복습 안내 없음');
+  check(await page.$$eval('.meta-chip', (e) => e.length) === 5 && await page.isVisible('#head-topic .tag-topic'), '해결 후 주제·문법 칩 표시');
   await shot(page, '02-solve-pass');
 
   console.log('== 상태 저장 / 새로고침');
@@ -251,7 +282,8 @@ async function shot(page, name) {
   await page.goto(`${base}#p/bfs`);
   await page.waitForSelector('.CodeMirror');
   check(await page.$$eval('.statement h2', (e) => e.map((x) => x.textContent).join()) === '예제', '본문만 있는 형식 렌더링');
-  check(await page.$$eval('.meta-chip', (e) => e.length) === 5, '필드로 메타 칩 구성');
+  const bfsChips = await page.$$eval('.meta-chip', (e) => e.map((x) => x.textContent));
+  check(bfsChips.length === 4 && bfsChips.some((t) => t.includes('주제 숨김')), '필드로 메타 칩 구성(주제 숨김)', bfsChips.join(' | '));
   const bfsCode = await page.evaluate(() => document.querySelector('.CodeMirror').CodeMirror.getValue());
   check(bfsCode.includes('q.append(nx, ny, d+1)'), '시작 코드 버그 보존');
   await page.click('#run-all');
@@ -272,6 +304,161 @@ async function shot(page, name) {
   check(await count() === 1, '풀이 여부 필터: 복습 필요 1개');
   await page.selectOption('#f-status', 'solved');
   check(await count() === 1, '풀이 여부 필터: 해결 1개');
+
+  const stateOf = (id) => page.evaluate((pid) => JSON.parse(localStorage.getItem('recall-state-v1')).problems[pid] || {}, id);
+  const pressed = (s) => page.$eval(`#status-switch [data-status="${s}"]`, (b) => b.getAttribute('aria-pressed') === 'true');
+
+  console.log('== 힌트: 확인 → 3단계 → 힌트 사용 후 통과는 "복습 필요"');
+  const H = 'daily-2026-11-12-2';
+  await page.goto(`${base}#p/${H}`);
+  await page.waitForSelector('#hint-next');
+  check(await page.isVisible('#head-topic .tag-hidden') && (await page.textContent('#related-concepts')).trim() === '', '힌트 전: 주제 숨김, 관련 개념 없음');
+  await page.click('#hint-next');
+  check(await page.isVisible('#hint-confirm'), '첫 힌트 전에 화면 안 확인');
+  check((await page.textContent('#hint-confirm-text')).trim() === "힌트를 보면 이 문제는 '복습 필요'로 분류돼요. 계속할까요?", '확인 문구');
+  await page.click('#hint-no');
+  check(!(await page.isVisible('#hint-confirm')) && await page.$$eval('.hint-item', (e) => e.length) === 0 && await pressed('unsolved'), '취소하면 아무것도 열지 않음');
+  await page.click('#hint-next');
+  await page.click('#hint-yes');
+  check(await page.$$eval('.hint-item', (e) => e.length) === 1, '1단계 열림');
+  check((await page.textContent('.hint-item p')).trim() === BY_ID.get(H).hints[0], '1단계 내용 = hints[0]');
+  check(await pressed('review'), '힌트를 열면 "복습 필요"');
+  check(await page.isVisible('#head-topic .tag-topic') && await page.$$eval('.meta-chip', (e) => e.length) === 5, '힌트 1단계 뒤 주제·문법 표시');
+  const relH = CONCEPTS.filter((c) => relates(BY_ID.get(H).topic, c.topics));
+  if (relH.length) {
+    await page.waitForSelector('#related-concepts .concept-chip');
+    check(await page.$$eval('#related-concepts .concept-chip', (e) => e.length) === relH.length, '힌트 1단계 뒤 관련 개념 링크', relH.map((c) => c.title).join(', '));
+  } else {
+    check(true, '관련 개념 없음(개념서에 이어진 항목이 없음)');
+  }
+  await page.click('#hint-next');
+  check(!(await page.isVisible('#hint-confirm')) && await page.$$eval('.hint-item', (e) => e.length) === 2, '2단계는 확인 없이 열림');
+  await page.click('#hint-next');
+  check(await page.$$eval('.hint-item', (e) => e.length) === 3 && !(await page.isVisible('#hint-next')), '3단계까지 열면 버튼 사라짐');
+  await page.reload();
+  await page.waitForSelector('#hint-list');
+  check(await page.$$eval('.hint-item', (e) => e.length) === 3, '연 단계는 새로고침 뒤에도 유지');
+  const hs = await stateOf(H);
+  check(hs.hintUsed === true && hs.hintLevel === 3 && Array.isArray(hs.hintOpenedAt) && hs.hintOpenedAt.length === 3 && !!hs.hintUsedAt, 'hintUsed·단계·시각 저장', JSON.stringify({ u: hs.hintUsed, l: hs.hintLevel, n: hs.hintOpenedAt?.length }));
+  await setCode(page, PY_SOL(H));
+  await page.click('#run-all');
+  await page.waitForFunction(() => document.querySelector('.score strong')?.classList.contains('pass-all'), null, { timeout: 60000 });
+  check(await pressed('review'), '힌트 사용 후 전체 통과 → "복습 필요"로 저장');
+  check((await page.textContent('.msg-hint')).trim() === "힌트를 사용해서 '복습 필요'로 분류했어요. 나중에 힌트 없이 다시 풀어 보세요.", '힌트 사용 안내 문구');
+  check((await stateOf(H)).status === 'review', '저장된 상태 = review');
+  check(await page.isVisible('#hint-clear'), '"힌트 없이 다시 풀었어요" 버튼 표시');
+  await shot(page, '05-hint-review');
+
+  await page.goto(base);
+  await page.waitForSelector('.problem-row');
+  check(await page.isVisible(`.problem-row[data-id="${H}"] .badge-hint`), '목록에 "힌트 사용" 배지');
+  await page.selectOption('#f-status', 'review');
+  check(await page.isVisible(`.problem-row[data-id="${H}"]`), '풀이 여부 "복습 필요" 필터에 포함');
+  await page.selectOption('#f-status', '');
+
+  await page.goto(`${base}#p/${H}`);
+  await page.waitForSelector('#hint-clear');
+  await page.click('#hint-clear');
+  check(await pressed('solved') && !(await page.isVisible('#hint-clear')), '"힌트 없이 다시 풀었어요" → 해결');
+  const hs2 = await stateOf(H);
+  check(hs2.status === 'solved' && hs2.hintUsed === false && hs2.hintLevel === 3, 'hintUsed 해제, 연 단계는 유지');
+
+  console.log('== 힌트: 해결한 문제에서 열면 상태 그대로');
+  const S = 'daily-2026-11-11-2'; // 위에서 힌트 없이 해결
+  check(!(await stateOf(S)).hintUsed, '힌트 없이 해결한 문제는 hintUsed 없음');
+  await page.goto(`${base}#p/${S}`);
+  await page.waitForSelector('#hint-next');
+  await page.click('#hint-next');
+  check(!(await page.isVisible('#hint-confirm')) && await page.$$eval('.hint-item', (e) => e.length) === 1, '해결한 문제는 확인 없이 바로 열림');
+  check(await pressed('solved') && (await stateOf(S)).hintUsed !== true && !(await page.isVisible('#hint-clear')), '해결 상태 유지, hintUsed 아님');
+
+  console.log('== 힌트 사용 중(미해결) 문제');
+  const U = 'daily-2026-11-12-1';
+  await page.goto(`${base}#p/${U}`);
+  await page.waitForSelector('#hint-next');
+  await page.click('#hint-next');
+  await page.click('#hint-yes');
+  await page.goto(base);
+  await page.waitForSelector('.problem-row');
+  check(await page.isVisible(`.problem-row[data-id="${U}"] .badge-hint`) && (await page.textContent(`.problem-row[data-id="${U}"] .tag-topic`)).trim() === BY_ID.get(U).topic, '미해결이라도 힌트를 열면 배지·주제 표시');
+
+  console.log('== 개념서');
+  await page.click('[data-nav="concepts"]');
+  await page.waitForSelector('#concept-list');
+  check(page.url().endsWith('#concepts') && await page.$eval('[data-nav="concepts"]', (a) => a.classList.contains('is-active')), '사이드바 "개념서" 메뉴와 라우팅');
+  const cards = () => page.$$eval('.concept-card', (e) => e.length);
+  check(await cards() === CONCEPTS.length && CONCEPTS.length > 0, '개념 목록', `${CONCEPTS.length}개`);
+  if (CONCEPTS.length) {
+    const target = CONCEPTS.find((c) => c.slug === 'heap') || CONCEPTS[0];
+    await page.fill('#c-q', target.title);
+    check(await cards() >= 1 && await page.isVisible(`.concept-card[data-slug="${target.slug}"]`), '개념 검색', target.title);
+    await page.fill('#c-q', 'zzz없는말zzz');
+    check(await cards() === 0 && await page.isVisible('.empty-state'), '검색 결과 없음');
+    await page.fill('#c-q', '');
+    await page.click(`#c-cats [data-cat="${target.category}"]`);
+    check(await cards() === CONCEPTS.filter((c) => c.category === target.category).length, '카테고리 필터', target.category);
+    await page.click('#c-cats [data-cat=""]');
+    await page.click(`.concept-card[data-slug="${target.slug}"]`);
+    await page.waitForSelector('#c-items .api-table');
+    check(page.url().endsWith(`#concepts/${target.slug}`), '개념 상세 라우팅');
+    const secs = await page.$$eval('.concept-section h2', (e) => e.map((x) => x.textContent));
+    check(JSON.stringify(secs) === JSON.stringify(['이럴 때 써요', '핵심 함수·문법', '예제 코드', '상황별 선택 가이드', '자주 하는 실수', '시험장 체크리스트', '관련 문제']), '상세 구성', secs.join(','));
+    const detail = readJson(`concepts/${target.slug}.json`);
+    check(await page.$$eval('.api-table tbody tr', (e) => e.length) === detail.python.items.length, 'Python 함수 표');
+    // 언어 토글은 기존 언어 선택과 공유한다(위에서 마지막으로 고른 언어는 C++).
+    await page.click('.lang-tabs [data-lang="python"]');
+    check((await page.textContent('#c-examples pre.code')).trim() === detail.python.examples[0].code.trim(), 'Python 예제 코드');
+    check((await page.textContent('#c-examples .io-box:last-child pre')).trim() === detail.python.examples[0].output.trim(), '예제 실행 결과 표시');
+    await page.click('.lang-tabs [data-lang="cpp"]');
+    check((await page.textContent('#c-examples pre.code')).trim() === detail.cpp.examples[0].code.trim() && await page.$$eval('.api-table tbody tr', (e) => e.length) === detail.cpp.items.length, 'C++ 로 전환');
+    check(await page.$$eval('.pitfall', (e) => e.length) === detail.cpp.pitfalls.length, '자주 하는 실수(C++)');
+    check(await page.isVisible('#c-examples [data-copy-ex="0"]'), '예제 복사 버튼');
+    const rel = ALL.filter((p) => relates(p.topic, detail.topics));
+    check(await page.$$eval('.related-problem', (e) => e.length) === rel.length, '관련 문제 연결', `${rel.length}개`);
+    if (rel.length) check(await page.isVisible('.related-problem .status'), '관련 문제에 풀이 상태 표시');
+    await page.goto(`${base}#p/daily-2026-11-10-1`);
+    await page.waitForSelector('.CodeMirror');
+    check(await page.$eval('.lang-tabs [data-lang="cpp"]', (b) => b.getAttribute('aria-selected')) === 'true', '개념서 언어 선택이 풀이 화면과 공유됨');
+    await page.click('.lang-tabs [data-lang="python"]');
+    await page.goto(`${base}#concepts/없는-개념`);
+    await page.waitForSelector('.empty-state');
+    check((await page.textContent('.empty-state')).includes('찾을 수 없어요'), '없는 개념 안내');
+    await shot(page, '06-concepts');
+  }
+
+  console.log('== 예전 저장 데이터 호환');
+  const old = await browser.newContext({ viewport: { width: 1360, height: 900 } });
+  await old.addInitScript(() => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    // 힌트·주제 표시 필드가 생기기 전 형식
+    localStorage.setItem('recall-state-v1', JSON.stringify({
+      version: 1, lang: 'cpp',
+      problems: {
+        'daily-2026-11-10-1': { status: 'solved', statusAt: '2026-11-11T00:00:00.000Z', solvedAt: '2026-11-11T00:00:00.000Z', drafts: { python: '# 예전 초안\n' }, attempts: [{ at: '2026-11-11T00:00:00.000Z', lang: 'python', passed: 4, total: 4, verdict: 'pass' }] },
+        bfs: { status: 'review', drafts: {}, attempts: [] },
+      },
+    }));
+  });
+  const op = await old.newPage();
+  op.on('pageerror', (e2) => errors.push(`[old] ${e2}`));
+  await op.goto(base);
+  await op.waitForSelector('.problem-row');
+  check((await op.textContent('.problem-row[data-id="daily-2026-11-10-1"] .status')).trim() === '해결' && (await op.textContent('.problem-row[data-id="bfs"] .status')).trim() === '복습 필요', '예전 상태 그대로 표시');
+  check(await op.isVisible('.problem-row[data-id="daily-2026-11-10-1"] .tag-topic') && await op.isVisible('.problem-row[data-id="bfs"] .tag-hidden'), '예전 데이터: 해결한 문제만 주제 표시');
+  check(await op.$$eval('.badge-hint', (e) => e.length) === 0 && !(await op.isChecked('#show-topics')), '예전 데이터: 힌트 배지 없음, 토글 꺼짐');
+  await op.goto(`${base}#p/daily-2026-11-10-1`);
+  await op.waitForSelector('.CodeMirror');
+  check(await op.$eval('.lang-tabs [data-lang="cpp"]', (b) => b.getAttribute('aria-selected')) === 'true', '예전 언어 선택 유지');
+  await op.click('.lang-tabs [data-lang="python"]');
+  check((await op.evaluate(() => document.querySelector('.CodeMirror').CodeMirror.getValue())) === '# 예전 초안\n', '예전 초안 유지');
+  await op.goto(`${base}#p/bfs`);
+  await op.waitForSelector('#hint-next');
+  await op.click('#hint-next');
+  await op.click('#hint-yes');
+  const ob = await op.evaluate(() => JSON.parse(localStorage.getItem('recall-state-v1')).problems.bfs);
+  check(ob.hintUsed === true && ob.hintLevel === 1 && ob.status === 'review' && Array.isArray(ob.attempts), '예전 항목에 힌트 필드 추가');
+  await old.close();
 
   console.log('== 모바일 폭(390px)');
   const m = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
@@ -296,6 +483,20 @@ async function shot(page, name) {
   await mp.click('.result-item summary');
   check(await noScroll(), '결과 펼쳐도 가로 스크롤 없음');
   await shot(mp, '04-mobile-solve');
+  await mp.click('#hint-next');
+  await mp.click('#hint-yes');
+  await mp.click('#hint-next');
+  check(await mp.$$eval('.hint-item', (e) => e.length) === 2 && await noScroll(), '모바일: 힌트 열기, 가로 스크롤 없음');
+  const navBox = await mp.$eval('[data-nav="concepts"]', (el) => { const r = el.getBoundingClientRect(); return { right: r.right, w: window.innerWidth }; });
+  check(navBox.right <= navBox.w, '모바일: 상단 바에 개념서 메뉴', JSON.stringify(navBox));
+  await mp.click('[data-nav="concepts"]');
+  await mp.waitForSelector('.concept-card');
+  check(await noScroll(), '모바일: 개념서 목록 가로 스크롤 없음');
+  await mp.click('.concept-card');
+  await mp.waitForSelector('#c-items .api-table');
+  check(await noScroll(), '모바일: 개념 상세 가로 스크롤 없음');
+  check(await mp.$eval('.api-table thead', (el) => getComputedStyle(el).display) === 'none', '모바일: 함수 표를 카드처럼 쌓음');
+  await shot(mp, '07-mobile-concept');
   await m.close();
 
   console.log('== 요청 제한(테스트용으로 3초에 3회로 줄임)');

@@ -1,4 +1,4 @@
-import { loadProblems, parseDescription, paragraphs, syntaxTokens } from './data.js';
+import { loadProblems, parseDescription, paragraphs, syntaxTokens, loadConceptIndex, loadConcept, topicRelates } from './data.js';
 import * as store from './store.js';
 import { LANGS, RATE_LIMIT, runTests, runCustom, firstDiffLine } from './runner.js';
 import { esc, fmtMs, fmtWhen, clip, toast, copyText, debounce } from './util.js';
@@ -13,6 +13,10 @@ const SHOW_OUTPUT = 20000;
 let DATA = null;
 let cleanup = null;
 const filters = { q: '', difficulty: '', topic: '', syntax: '', status: '', category: '' };
+const conceptFilters = { q: '', category: '' };
+const CONCEPT_CATEGORIES = ['기초 문법', '자료구조', '탐색', '알고리즘', '그래프', '수학', '실전 팁'];
+// 주제(topic·syntax)를 아직 보여 주지 않는 문제에 쓰는 문구
+const HIDDEN_TOPIC = '주제 숨김';
 
 // ------------------------------------------------------------------ 부팅과 라우팅
 
@@ -36,10 +40,24 @@ async function boot() {
 
 function route() {
   if (cleanup) { cleanup(); cleanup = null; }
-  const m = location.hash.match(/^#p\/(.+)$/);
+  viewToken += 1; // 아직 그리는 중인 이전 화면(개념서 로딩)이 새 화면을 덮지 않게
+  const hash = location.hash;
+  const m = hash.match(/^#p\/(.+)$/);
+  const c = hash.match(/^#concepts(?:\/(.+))?$/);
+  setNav(c ? 'concepts' : 'archive');
   if (m) renderProblem(decodeURIComponent(m[1]));
+  else if (c && c[1]) renderConcept(decodeURIComponent(c[1]));
+  else if (c) renderConceptList();
   else renderArchive();
   window.scrollTo(0, 0);
+}
+
+function setNav(key) {
+  document.querySelectorAll('[data-nav]').forEach((a) => {
+    const on = a.dataset.nav === key;
+    a.classList.toggle('is-active', on);
+    if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
 }
 
 function setCrumb(items) {
@@ -77,10 +95,11 @@ function matches(p) {
   if (filters.topic && p.topic !== filters.topic) return false;
   if (filters.syntax && !syntaxTokens(p.syntax).includes(filters.syntax)) return false;
   if (filters.category && p.category !== filters.category) return false;
-  if (filters.status && store.getStatus(p.id) !== filters.status) return false;
+  if (filters.status && store.filterStatus(p.id) !== filters.status) return false;
   const q = filters.q.trim().toLowerCase();
   if (q) {
-    const hay = `${p.title} ${p.topic} ${p.syntax}`.toLowerCase();
+    // 숨긴 주제로는 검색되지 않게 한다(알고리즘·문법 필터는 그대로 쓸 수 있다).
+    const hay = (store.topicRevealed(p.id) ? `${p.title} ${p.topic} ${p.syntax}` : p.title).toLowerCase();
     if (!q.split(/\s+/).every((w) => hay.includes(w))) return false;
   }
   return true;
@@ -131,7 +150,14 @@ function renderArchive() {
     </form>
     <div class="list-bar">
       <span id="count"></span>
-      <button class="btn btn-sm btn-ghost" type="button" id="reset-filters">필터 초기화</button>
+      <span class="list-bar-right">
+        <button class="btn btn-sm btn-ghost" type="button" id="reset-filters">필터 초기화</button>
+        <label class="switch" title="해결 전이고 힌트도 열지 않은 문제의 알고리즘 주제와 핵심 문법을 보여 줘요">
+          <input type="checkbox" id="show-topics"${store.getShowTopics() ? ' checked' : ''}>
+          <span class="switch-track" aria-hidden="true"></span>
+          <span>주제 표시</span>
+        </label>
+      </span>
     </div>
     <div id="list"></div>`;
 
@@ -144,6 +170,10 @@ function renderArchive() {
     drawList();
   });
   viewEl.querySelector('#reset-filters').addEventListener('click', resetFilters);
+  viewEl.querySelector('#show-topics').addEventListener('change', (e) => {
+    store.setShowTopics(e.target.checked);
+    drawList();
+  });
 
   function resetFilters() {
     Object.keys(filters).forEach((k) => { filters[k] = ''; });
@@ -173,26 +203,38 @@ function renderArchive() {
   drawList();
 }
 
+function topicTag(p) {
+  return store.topicRevealed(p.id)
+    ? `<span class="tag tag-topic">${esc(p.topic)}</span>`
+    : `<span class="tag tag-hidden" title="해결하거나 힌트를 열면 보여요">${HIDDEN_TOPIC}</span>`;
+}
+
+function hintBadge(id) {
+  return store.getHint(id).used ? '<span class="badge badge-hint" title="해결 전에 힌트를 열었어요">힌트 사용</span>' : '';
+}
+
 function rowHtml(p) {
   const status = store.getStatus(p.id);
+  const revealed = store.topicRevealed(p.id);
   return `
     <li class="problem-row" data-id="${esc(p.id)}">
       <a class="problem-link" href="#p/${encodeURIComponent(p.id)}">
         <div>
           <div class="problem-title">${esc(p.title)}</div>
           <div class="problem-tags">
-            <span class="tag">${esc(p.topic)}</span>
+            ${topicTag(p)}
             <span class="tag tag-cat">${esc(p.category)}</span>
           </div>
           <div class="problem-meta">
             <span>${p.addedOn ? esc(p.addedOn) : '기본기'}</span>
-            <span>문법 · ${esc(p.syntax)}</span>
+            ${revealed ? `<span class="meta-syntax">문법 · ${esc(p.syntax)}</span>` : ''}
             <span>약 ${esc(p.minutes)}분</span>
           </div>
         </div>
         <div class="problem-side">
           ${diffBadge(p.difficulty)}
           ${statusBadge(status)}
+          ${hintBadge(p.id)}
         </div>
       </a>
     </li>`;
@@ -200,7 +242,10 @@ function rowHtml(p) {
 
 // ------------------------------------------------------------------ 풀이 화면
 
-function statementHtml(p) {
+// 주제를 숨길 때 빼는 설명 머리글
+const TOPIC_META_KEYS = ['알고리즘 주제', '핵심 문법'];
+
+function metaChipsHtml(p) {
   const d = parseDescription(p.description);
   const metaFromFields = [
     { key: '유형', value: p.category },
@@ -209,7 +254,22 @@ function statementHtml(p) {
     { key: '난이도', value: p.difficulty },
     { key: '예상 풀이 시간', value: `${p.minutes}분` },
   ];
-  const meta = d.meta.length ? d.meta : metaFromFields;
+  let meta = d.meta.length ? d.meta : metaFromFields;
+  if (!store.topicRevealed(p.id)) {
+    // 첫 주제 칩 자리에 "주제 숨김" 칩 하나만 남긴다.
+    let placed = false;
+    meta = meta.flatMap((m) => {
+      if (!TOPIC_META_KEYS.includes(m.key)) return [m];
+      if (placed) return [];
+      placed = true;
+      return [{ key: '알고리즘 주제', value: HIDDEN_TOPIC, hidden: true }];
+    });
+  }
+  return meta.map((m) => `<span class="meta-chip${m.hidden ? ' meta-chip-hidden' : ''}"><b>${esc(m.key)}</b>${esc(m.value)}</span>`).join('');
+}
+
+function statementHtml(p) {
+  const d = parseDescription(p.description);
   const para = (text) => paragraphs(text).map((t) => `<p>${esc(t).replace(/\n/g, '<br>')}</p>`).join('');
   const sectionHtml = (s) => {
     const lines = s.text.split('\n').filter((l) => l.trim());
@@ -234,10 +294,41 @@ function statementHtml(p) {
     </div>
     <p class="tests-note">테스트 ${p.tests.length}개로 확인해요. 첫 번째 테스트가 위 예제예요.</p>` : '';
   return `
-    <div class="meta-chips">${meta.map((m) => `<span class="meta-chip"><b>${esc(m.key)}</b>${esc(m.value)}</span>`).join('')}</div>
+    <div class="meta-chips" id="meta-chips">${metaChipsHtml(p)}</div>
     <div class="body">${para(d.body)}</div>
     ${d.sections.map(sectionHtml).join('')}
     ${examples}`;
+}
+
+const HINT_STEPS = ['무엇을 쓸까', '어떻게 접근할까', '놓치기 쉬운 점'];
+const HINT_CONFIRM = "힌트를 보면 이 문제는 '복습 필요'로 분류돼요. 계속할까요?";
+const HINT_REVIEW_MSG = "힌트를 사용해서 '복습 필요'로 분류했어요. 나중에 힌트 없이 다시 풀어 보세요.";
+
+function hasHints(p) {
+  return Array.isArray(p.hints) && p.hints.some((h) => typeof h === 'string' && h.trim());
+}
+
+function hintCardHtml(p) {
+  if (!hasHints(p)) {
+    return `<section class="card hint-card" id="hints"><div class="hint-head"><h2>힌트</h2></div><p class="muted hint-empty">이 문제에는 아직 힌트가 없어요.</p><div id="related-concepts"></div></section>`;
+  }
+  return `
+    <section class="card hint-card" id="hints" aria-labelledby="hints-title">
+      <div class="hint-head">
+        <h2 id="hints-title">힌트</h2>
+        <span class="muted hint-progress" id="hint-progress"></span>
+      </div>
+      <ol class="hint-list" id="hint-list"></ol>
+      <div class="hint-confirm" id="hint-confirm" role="alertdialog" aria-labelledby="hint-confirm-text" hidden>
+        <p id="hint-confirm-text">${esc(HINT_CONFIRM)}</p>
+        <div class="hint-confirm-actions">
+          <button class="btn btn-sm btn-primary" type="button" id="hint-yes">계속</button>
+          <button class="btn btn-sm btn-ghost" type="button" id="hint-no">취소</button>
+        </div>
+      </div>
+      <button class="btn" type="button" id="hint-next">힌트 보기</button>
+      <div id="related-concepts"></div>
+    </section>`;
 }
 
 function renderProblem(id) {
@@ -263,7 +354,7 @@ function renderProblem(id) {
         <h1>${esc(p.title)}</h1>
         <div class="head-badges">
           ${diffBadge(p.difficulty)}
-          <span class="tag">${esc(p.topic)}</span>
+          <span id="head-topic">${topicTag(p)}</span>
           <span class="tag tag-cat">${esc(p.category)}</span>
           <span class="muted" style="font-size:13px">${p.addedOn ? esc(p.addedOn) : '기본기'} · 약 ${esc(p.minutes)}분</span>
         </div>
@@ -273,10 +364,16 @@ function renderProblem(id) {
         <div class="status-switch" role="group" aria-labelledby="status-label" id="status-switch">
           ${['unsolved', 'review', 'solved'].map((s) => `<button type="button" data-status="${s}">${STATUS_LABEL[s]}</button>`).join('')}
         </div>
+        <div class="hint-clear-row">
+          <button class="btn btn-sm" type="button" id="hint-clear" hidden>힌트 없이 다시 풀었어요</button>
+        </div>
       </div>
     </div>
     <div class="solve-grid">
-      <article class="card statement" id="statement">${statementHtml(p)}</article>
+      <div class="left-col">
+        <article class="card statement" id="statement">${statementHtml(p)}</article>
+        ${hintCardHtml(p)}
+      </div>
       <section class="workbench" aria-label="코드 작성과 실행">
         <div class="card editor-card">
           <div class="editor-top">
@@ -312,18 +409,100 @@ function renderProblem(id) {
 
   // ---- 상태 스위치
   const switchEl = viewEl.querySelector('#status-switch');
+  const hintClearBtn = viewEl.querySelector('#hint-clear');
   const drawStatus = () => {
     const s = store.getStatus(p.id);
     switchEl.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.status === s)));
+    hintClearBtn.hidden = !(s === 'review' && store.getHint(p.id).used);
   };
   switchEl.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-status]');
     if (!b) return;
+    // 직접 '해결'로 바꾸면 힌트 사용 표시도 푼다(목록 배지와 필터가 상태와 어긋나지 않게).
+    if (b.dataset.status === 'solved' && store.getHint(p.id).used) store.clearHintUsed(p.id);
     store.setStatus(p.id, b.dataset.status);
-    drawStatus();
+    drawAll();
     toast(`풀이 상태를 '${STATUS_LABEL[b.dataset.status]}'(으)로 바꿨어요.`);
   });
-  drawStatus();
+  hintClearBtn.addEventListener('click', () => {
+    store.clearHintUsed(p.id);
+    store.setStatus(p.id, 'solved');
+    drawAll();
+    toast("힌트 없이 다시 풀었어요! 상태를 '해결'로 바꿨어요.");
+  });
+
+  // ---- 힌트
+  const hintList = viewEl.querySelector('#hint-list');
+  const hintNext = viewEl.querySelector('#hint-next');
+  const hintConfirm = viewEl.querySelector('#hint-confirm');
+  const hintProgress = viewEl.querySelector('#hint-progress');
+  const hints = hasHints(p) ? p.hints.slice(0, store.HINT_LEVELS) : [];
+  function drawHints() {
+    if (!hintList) return;
+    const { level } = store.getHint(p.id);
+    const shown = Math.min(level, hints.length);
+    hintList.innerHTML = hints.slice(0, shown).map((h, i) => `
+      <li class="hint-item">
+        <div class="hint-step">${i + 1}단계 · ${HINT_STEPS[i] || ''}</div>
+        <p>${esc(h)}</p>
+      </li>`).join('');
+    hintProgress.textContent = `${shown}/${hints.length}`;
+    hintNext.hidden = shown >= hints.length;
+    hintNext.textContent = shown === 0 ? '힌트 보기' : `다음 힌트 보기 (${shown + 1}단계)`;
+  }
+  function openHint() {
+    const before = store.getStatus(p.id);
+    store.openNextHint(p.id);
+    hintConfirm.hidden = true;
+    drawAll();
+    const after = store.getStatus(p.id);
+    if (before !== after) toast("힌트를 열어서 '복습 필요'로 분류했어요.");
+    const items = hintList.querySelectorAll('.hint-item');
+    items[items.length - 1]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  if (hintNext) {
+    hintNext.addEventListener('click', () => {
+      // 처음 여는 힌트이고 아직 해결 전이면 화면 안에서 먼저 확인을 받는다.
+      if (store.getHint(p.id).level === 0 && store.getStatus(p.id) !== 'solved') {
+        hintConfirm.hidden = false;
+        hintNext.hidden = true;
+        viewEl.querySelector('#hint-yes').focus();
+        return;
+      }
+      openHint();
+    });
+    viewEl.querySelector('#hint-yes').addEventListener('click', openHint);
+    viewEl.querySelector('#hint-no').addEventListener('click', () => {
+      hintConfirm.hidden = true;
+      hintNext.hidden = false;
+      hintNext.focus();
+    });
+  }
+
+  // ---- 관련 개념: 힌트 1단계를 열었거나 해결한 뒤에만 보여 준다.
+  const relatedEl = viewEl.querySelector('#related-concepts');
+  let conceptsForTopic = null;
+  loadConceptIndex()
+    .then((list) => { conceptsForTopic = list.filter((c) => topicRelates(p.topic, c.topics)); if (alive) drawRelated(); })
+    .catch(() => { conceptsForTopic = []; });
+  function drawRelated() {
+    const open = store.getStatus(p.id) === 'solved' || store.getHint(p.id).level >= 1;
+    if (!open || !conceptsForTopic || !conceptsForTopic.length) { relatedEl.innerHTML = ''; return; }
+    relatedEl.innerHTML = `
+      <div class="related-concepts">
+        <span class="related-label">관련 개념</span>
+        ${conceptsForTopic.map((c) => `<a class="concept-chip" href="#concepts/${encodeURIComponent(c.slug)}">${esc(c.title)}</a>`).join('')}
+      </div>`;
+  }
+
+  function drawAll() {
+    drawStatus();
+    drawHints();
+    drawRelated();
+    viewEl.querySelector('#head-topic').innerHTML = topicTag(p);
+    viewEl.querySelector('#meta-chips').innerHTML = metaChipsHtml(p);
+  }
+  drawAll();
 
   // ---- 예제 복사
   viewEl.querySelector('#statement').addEventListener('click', async (e) => {
@@ -412,6 +591,7 @@ function renderProblem(id) {
     if (!live) {
       if (service) cheer = '';
       else if (res.compileError) cheer = '컴파일 오류부터 고쳐 볼까요? 오류 메시지의 줄 번호를 확인해 보세요.';
+      else if (passed === total && res.hintReview) cheer = '';
       else if (passed === total) cheer = '모든 테스트를 통과했어요. 잘했어요!';
       else cheer = '괜찮아요, 다음에 맞힐 문제예요. 실패한 테스트를 펼쳐 기대 출력과 비교해 보세요.';
     }
@@ -423,6 +603,7 @@ function renderProblem(id) {
       <div class="progress" aria-hidden="true"><span style="width:${total ? (passed / total) * 100 : 0}%"></span></div>
       ${waiting ? `<div class="msg msg-wait" style="margin-bottom:12px">Wandbox는 1분에 약 ${RATE_LIMIT}번까지만 실행할 수 있어요. 자리가 나면 이어서 실행할게요.</div>` : ''}
       ${service && !live ? `<div class="msg msg-service" style="margin-bottom:12px">실행 서비스에 연결하지 못했어요. 테스트 ${service}개를 확인하지 못했어요 — 잠시 후 다시 실행해 주세요. (이번 결과는 풀이 기록에 남기지 않았어요)</div>` : ''}
+      ${res.hintReview && !live && passed === total ? `<div class="msg msg-hint" style="margin-bottom:12px">${esc(HINT_REVIEW_MSG)}</div>` : ''}
       ${cheer ? `<p class="cheer">${cheer}</p>` : ''}
       ${res.compileError ? `<div class="error-box"><h4>컴파일 오류</h4><pre>${esc(clip(res.compileError, SHOW_OUTPUT))}</pre></div>` : ''}
       <div class="result-list" style="${res.compileError ? 'margin-top:10px' : ''}">
@@ -480,17 +661,24 @@ function renderProblem(id) {
         if (alive) drawResults({ lang: runLang, at: startedAt, total: p.tests.length, compileError, results }, { live: true });
       });
       const record = { ...res, at: startedAt };
-      store.setLastResult(p.id, record);
       if (!res.serviceErrors) {
         const verdict = res.compileError ? 'compile' : res.passed === res.total ? 'pass' : 'fail';
-        store.addAttempt(p.id, { at: startedAt, lang: runLang, passed: res.passed, total: res.total, verdict });
+        store.addAttempt(p.id, { at: startedAt, lang: runLang, passed: res.passed, total: res.total, verdict, ...(store.getHint(p.id).used ? { hintUsed: true } : {}) });
         if (verdict === 'pass') {
           const before = store.getStatus(p.id);
-          store.setStatus(p.id, 'solved');
-          if (alive && before !== 'solved') toast("모든 테스트를 통과했어요! 상태를 '해결'로 바꿨어요.");
+          if (before !== 'solved' && store.getHint(p.id).used) {
+            // 해결 전에 힌트를 열었으면 '해결'이 아니라 '복습 필요'로 둔다.
+            store.setStatus(p.id, 'review');
+            record.hintReview = true;
+            if (alive) toast(HINT_REVIEW_MSG);
+          } else {
+            store.setStatus(p.id, 'solved');
+            if (alive && before !== 'solved') toast("모든 테스트를 통과했어요! 상태를 '해결'로 바꿨어요.");
+          }
         }
       }
-      if (alive) { drawResults(record); drawStatus(); }
+      store.setLastResult(p.id, record);
+      if (alive) { drawResults(record); drawAll(); }
     } finally {
       if (alive) setRunning(false); else running = false;
     }
@@ -549,6 +737,227 @@ function renderProblem(id) {
     alive = false;
     saveDraft.flush(lang);
   };
+}
+
+// ------------------------------------------------------------------ 개념서
+
+// 비동기로 그리는 화면이 다른 화면으로 넘어간 뒤에 덮어쓰지 않게 하는 표식
+let viewToken = 0;
+function claimView() {
+  viewToken += 1;
+  const mine = viewToken;
+  return () => mine === viewToken;
+}
+
+function conceptLoadError(err, retry) {
+  viewEl.innerHTML = `
+    <div class="card empty-state">
+      <p>개념서를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+      <p class="muted">${esc(err?.message || err || '')}</p>
+      <button class="btn" type="button" id="retry">다시 불러오기</button>
+    </div>`;
+  viewEl.querySelector('#retry').addEventListener('click', retry);
+}
+
+function relatedProblems(c) {
+  return DATA.list.filter((p) => topicRelates(p.topic, c.topics));
+}
+
+function renderConceptList() {
+  setCrumb([{ label: '개념서' }]);
+  const isCurrent = claimView();
+  viewEl.innerHTML = '<div class="loading">개념서를 불러오는 중이에요…</div>';
+  loadConceptIndex().then((list) => {
+    if (!isCurrent()) return;
+    const cats = CONCEPT_CATEGORIES.filter((cat) => list.some((c) => c.category === cat));
+    viewEl.innerHTML = `
+      <div class="page-head">
+        <div>
+          <h1>개념서</h1>
+          <p>문제를 풀다 막힐 때 꺼내 보는 도구 사용법과 선택 기준이에요. 특정 문제의 정답은 담지 않았어요.</p>
+        </div>
+      </div>
+      <form class="card concept-filters" role="search" id="concept-filters">
+        <div class="field field-search">
+          <label for="c-q">검색</label>
+          <input class="input" id="c-q" type="search" placeholder="이름, 요약, 함수로 찾기" value="${esc(conceptFilters.q)}" autocomplete="off">
+        </div>
+        <div class="field">
+          <span class="field-label" id="c-cat-label">카테고리</span>
+          <div class="chip-group" role="group" aria-labelledby="c-cat-label" id="c-cats">
+            ${['', ...cats].map((cat) => `<button type="button" class="chip" data-cat="${esc(cat)}" aria-pressed="${conceptFilters.category === cat}">${cat ? esc(cat) : '전체'}</button>`).join('')}
+          </div>
+        </div>
+      </form>
+      <div class="list-bar"><span id="c-count"></span></div>
+      <div id="concept-list"></div>`;
+    const form = viewEl.querySelector('#concept-filters');
+    form.addEventListener('submit', (e) => e.preventDefault());
+    viewEl.querySelector('#c-q').addEventListener('input', (e) => { conceptFilters.q = e.target.value; draw(); });
+    viewEl.querySelector('#c-cats').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-cat]');
+      if (!b) return;
+      conceptFilters.category = b.dataset.cat;
+      viewEl.querySelectorAll('#c-cats [data-cat]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      draw();
+    });
+    function draw() {
+      const words = conceptFilters.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const shown = list.filter((c) => {
+        if (conceptFilters.category && c.category !== conceptFilters.category) return false;
+        const hay = `${c.title} ${c.summary} ${c.category} ${(c.topics || []).join(' ')} ${c.slug}`.toLowerCase();
+        return words.every((w) => hay.includes(w));
+      });
+      viewEl.querySelector('#c-count').innerHTML = shown.length === list.length
+        ? `총 <strong>${list.length}</strong>개 개념`
+        : `총 <strong>${list.length}</strong>개 개념 중 <strong>${shown.length}</strong>개`;
+      const el = viewEl.querySelector('#concept-list');
+      if (!shown.length) {
+        el.innerHTML = '<div class="card empty-state"><p>조건에 맞는 개념이 없어요.</p></div>';
+        return;
+      }
+      const groups = CONCEPT_CATEGORIES.map((cat) => [cat, shown.filter((c) => c.category === cat)]).filter(([, cs]) => cs.length);
+      el.innerHTML = groups.map(([cat, cs]) => `
+        <section class="concept-group">
+          <h2 class="concept-group-title">${esc(cat)}</h2>
+          <ul class="concept-grid">
+            ${cs.map((c) => {
+              const n = relatedProblems(c).length;
+              return `
+              <li>
+                <a class="card concept-card" href="#concepts/${encodeURIComponent(c.slug)}" data-slug="${esc(c.slug)}">
+                  <span class="concept-card-title">${esc(c.title)}</span>
+                  <span class="concept-card-summary">${esc(c.summary)}</span>
+                  <span class="concept-card-meta">${n ? `관련 문제 ${n}개` : '도구 사용법'}</span>
+                </a>
+              </li>`;
+            }).join('')}
+          </ul>
+        </section>`).join('');
+    }
+    draw();
+  }).catch((err) => { if (isCurrent()) conceptLoadError(err, renderConceptList); });
+}
+
+function renderConcept(slug) {
+  setCrumb([{ label: '개념서', href: '#concepts' }, { label: '불러오는 중…' }]);
+  const isCurrent = claimView();
+  viewEl.innerHTML = '<div class="loading">개념을 불러오는 중이에요…</div>';
+  Promise.all([loadConceptIndex(), loadConcept(slug).catch(() => null)]).then(([index, c]) => {
+    if (!isCurrent()) return;
+    if (!c || !index.some((x) => x.slug === slug)) {
+      setCrumb([{ label: '개념서', href: '#concepts' }, { label: '찾을 수 없음' }]);
+      viewEl.innerHTML = `
+        <div class="card empty-state">
+          <p>이 개념을 찾을 수 없어요.</p>
+          <a class="btn" href="#concepts">개념서 목록으로</a>
+        </div>`;
+      return;
+    }
+    setCrumb([{ label: '개념서', href: '#concepts' }, { label: c.title }]);
+    const related = relatedProblems(c);
+    const list = (arr) => (Array.isArray(arr) ? arr : []);
+    viewEl.innerHTML = `
+      <div class="solve-head concept-head">
+        <div>
+          <h1>${esc(c.title)}</h1>
+          <div class="head-badges"><span class="tag tag-cat">${esc(c.category)}</span></div>
+          <p class="concept-summary">${esc(c.summary)}</p>
+        </div>
+        <div class="lang-tabs" role="tablist" aria-label="언어">
+          ${Object.entries(LANGS).map(([k, v]) => `<button type="button" role="tab" data-lang="${k}">${v.label}</button>`).join('')}
+        </div>
+      </div>
+      <div class="concept-body">
+        <section class="card concept-section">
+          <h2>이럴 때 써요</h2>
+          <ul class="bullet-list">${list(c.when).map((w) => `<li>${esc(w)}</li>`).join('')}</ul>
+        </section>
+        <section class="card concept-section">
+          <h2>핵심 함수·문법</h2>
+          <div id="c-items"></div>
+        </section>
+        <section class="card concept-section">
+          <h2>예제 코드</h2>
+          <div id="c-examples"></div>
+        </section>
+        <section class="card concept-section">
+          <h2>상황별 선택 가이드</h2>
+          <ul class="decision-list">
+            ${list(c.decision).map((d) => `<li><span class="decision-when">${esc(d.situation)}</span><span class="decision-arrow" aria-hidden="true">→</span><span class="decision-use">${esc(d.use)}</span></li>`).join('')}
+          </ul>
+        </section>
+        <section class="card concept-section">
+          <h2>자주 하는 실수</h2>
+          <div id="c-pitfalls"></div>
+        </section>
+        <section class="card concept-section">
+          <h2>시험장 체크리스트</h2>
+          <ul class="checklist">${list(c.checklist).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+        </section>
+        <section class="card concept-section">
+          <h2>관련 문제</h2>
+          ${related.length ? `<ul class="related-problems">${related.map((p) => `
+            <li>
+              <a href="#p/${encodeURIComponent(p.id)}" class="related-problem" data-id="${esc(p.id)}">
+                <span class="related-title">${esc(p.title)}</span>
+                <span class="related-side">${diffBadge(p.difficulty)}${statusBadge(store.getStatus(p.id))}${hintBadge(p.id)}</span>
+              </a>
+            </li>`).join('')}</ul>` : '<p class="muted">아직 이 개념과 이어진 문제가 없어요.</p>'}
+        </section>
+      </div>`;
+
+    const tabs = viewEl.querySelectorAll('.lang-tabs [data-lang]');
+    function drawLang() {
+      const lang = store.getLang();
+      tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.lang === lang)));
+      const block = c[lang] || {};
+      viewEl.querySelector('#c-items').innerHTML = `
+        <div class="table-wrap">
+          <table class="api-table">
+            <thead><tr><th>이름</th><th>시그니처</th><th>하는 일</th><th>언제 쓰나</th><th>시간 복잡도</th></tr></thead>
+            <tbody>${list(block.items).map((it) => `
+              <tr>
+                <td data-label="이름"><code>${esc(it.name)}</code></td>
+                <td data-label="시그니처"><code class="sig">${esc(it.signature)}</code></td>
+                <td data-label="하는 일">${esc(it.does)}</td>
+                <td data-label="언제 쓰나">${esc(it.when)}</td>
+                <td data-label="시간 복잡도"><span class="complexity">${esc(it.complexity)}</span></td>
+              </tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+      viewEl.querySelector('#c-examples').innerHTML = list(block.examples).map((ex, i) => `
+        <div class="code-example">
+          <div class="code-head"><span>${esc(ex.title)}</span><button class="btn btn-sm btn-ghost" type="button" data-copy-ex="${i}">복사</button></div>
+          <pre class="code"><code>${esc(ex.code)}</code></pre>
+          <div class="code-io">
+            ${typeof ex.stdin === 'string' && ex.stdin ? `<div class="io-box"><h4>입력</h4><pre>${esc(ex.stdin)}</pre></div>` : ''}
+            <div class="io-box"><h4>실행 결과</h4><pre>${esc(ex.output) || '<span class="muted">(출력 없음)</span>'}</pre></div>
+          </div>
+        </div>`).join('');
+      viewEl.querySelector('#c-pitfalls').innerHTML = list(block.pitfalls).map((pt) => `
+        <div class="pitfall">
+          <div class="pitfall-grid">
+            <div><h4 class="pit-wrong">잘못된 코드</h4><pre class="code code-wrong"><code>${esc(pt.wrong)}</code></pre></div>
+            <div><h4 class="pit-right">올바른 코드</h4><pre class="code code-right"><code>${esc(pt.right)}</code></pre></div>
+          </div>
+          <p class="pitfall-why"><b>이유</b> ${esc(pt.why)}</p>
+        </div>`).join('');
+    }
+    tabs.forEach((t) => t.addEventListener('click', () => {
+      if (t.dataset.lang === store.getLang()) return;
+      store.setLang(t.dataset.lang);
+      drawLang();
+    }));
+    viewEl.querySelector('#c-examples').addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-copy-ex]');
+      if (!b) return;
+      const ex = list((c[store.getLang()] || {}).examples)[Number(b.dataset.copyEx)];
+      const ok = await copyText(ex?.code || '');
+      toast(ok ? '코드를 복사했어요.' : '복사하지 못했어요. 직접 선택해서 복사해 주세요.');
+    });
+    drawLang();
+  }).catch((err) => { if (isCurrent()) conceptLoadError(err, () => renderConcept(slug)); });
 }
 
 window.addEventListener('beforeunload', () => { if (cleanup) cleanup(); });
