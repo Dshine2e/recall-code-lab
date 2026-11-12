@@ -33,6 +33,14 @@ export function firstDiffLine(expected, actual) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// Wandbox 실행 환경 자체의 오류(예: status 126 + "OCI runtime error: crun: clone: Resource temporarily unavailable").
+// 사용자 코드가 낸 출력이 없고 오류 메시지가 컨테이너 런타임에서 온 경우만 해당한다.
+const SANDBOX_FAILURE = /OCI runtime (create |exec )?(error|failed)|\b(crun|runc): |Resource temporarily unavailable/;
+export function isSandboxFailure(data) {
+  if (String(data.status) === '0' || data.program_output) return false;
+  return SANDBOX_FAILURE.test(String(data.program_error || '')) || SANDBOX_FAILURE.test(String(data.compiler_error || ''));
+}
+
 /**
  * Wandbox 한 번 호출. 429/5xx/네트워크 오류는 1회 재시도.
  * 반환: { kind: 'ok', data, ms } | { kind: 'timeout', ms } | { kind: 'service', message }
@@ -74,6 +82,12 @@ export async function callWandbox(lang, code, stdin) {
       const data = await res.json();
       if (!data || typeof data !== 'object' || data.status === undefined) {
         return { kind: 'service', message: '알 수 없는 응답' };
+      }
+      if (isSandboxFailure(data)) {
+        // 서버가 붐벼 실행 컨테이너를 못 띄운 경우. HTTP 200으로 오지만 코드 문제가 아니므로 5xx처럼 다룬다.
+        lastMessage = '실행 서버가 붐벼요';
+        if (attempt === 0) { await sleep(2000); continue; }
+        return { kind: 'service', message: lastMessage };
       }
       return { kind: 'ok', data, ms: performance.now() - start };
     } catch (err) {

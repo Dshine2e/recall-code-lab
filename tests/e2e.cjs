@@ -84,6 +84,14 @@ async function shot(page, name) {
     const body = JSON.parse(route.request().postData());
     mock.calls.push(body);
     if (mock.failMode === '503') return route.fulfill({ status: 503, body: 'down' });
+    // Wandbox가 붐빌 때 실제로 돌려준 응답: HTTP 200 + status 126 + 컨테이너 런타임 오류
+    const oci = { status: '126', signal: '', compiler_output: '', compiler_error: '', compiler_message: '', program_output: '',
+      program_error: 'Error: OCI runtime error: crun: clone: Resource temporarily unavailable\n', program_message: '' };
+    const key = `${body.compiler}|${body.stdin}`;
+    if (mock.failMode === 'oci' || (mock.failMode === 'oci-once' && !mock.seen.has(key))) {
+      mock.seen.add(key);
+      return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(oci) });
+    }
     return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(fakeWandbox(body)) });
   });
   const page = await ctx.newPage();
@@ -214,6 +222,22 @@ async function shot(page, name) {
   check(mock.calls.length - before === 8, '429/5xx 1회 재시도', `${mock.calls.length - before}회 요청(테스트 4개)`);
   const after = await page.evaluate(() => JSON.parse(localStorage.getItem('recall-state-v1')).problems['daily-2026-11-11-2'].attempts.length);
   check(after === 5, '장애는 풀이 기록에 남기지 않음', `attempts=${after} (Python 2회 + C++ 3회)`);
+
+  console.log('== 실행 서버 과부하(HTTP 200 + OCI 런타임 오류)');
+  mock.seen = new Set();
+  mock.failMode = 'oci-once';
+  let n0 = mock.calls.length;
+  await page.click('#run-all');
+  await page.waitForFunction(() => !document.querySelector('#run-all').disabled && document.querySelector('.score strong'), null, { timeout: 60000 });
+  check(await page.evaluate(() => document.querySelector('.score strong').classList.contains('pass-all')), '한 번 실패 후 재시도로 전부 통과', `${mock.calls.length - n0}회 요청(테스트 4개)`);
+  check(mock.calls.length - n0 === 8, '과부하 응답은 1회 재시도');
+  mock.failMode = 'oci';
+  n0 = mock.calls.length;
+  await page.click('#run-all');
+  await page.waitForSelector('.msg-service', { timeout: 60000 });
+  check(!(await page.textContent('.results')).includes('런타임 오류'), '과부하를 런타임 오류로 표시하지 않음');
+  const afterOci = await page.evaluate(() => JSON.parse(localStorage.getItem('recall-state-v1')).problems['daily-2026-11-11-2'].attempts.length);
+  check(afterOci === 6, '과부하 실패는 풀이 기록에 남기지 않음', `attempts=${afterOci} (재시도 성공 1회만 추가)`);
   mock.failMode = null;
 
   console.log('== 처음 코드로 되돌리기');
