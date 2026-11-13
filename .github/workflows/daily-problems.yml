@@ -45,6 +45,8 @@ jobs:
         if: steps.check.outputs.exists != 'true'
         uses: anthropics/claude-code-action@v1
         with:
+          # 둘 중 등록된 것 하나로 인증한다. 구독(Pro/Max)이면 CLAUDE_CODE_OAUTH_TOKEN(`claude setup-token`), API 크레딧이면 ANTHROPIC_API_KEY.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: "CLAUDE.md의 일일 문제 생성 절차를 수행해. 오늘의 난이도 조합(tools/stats.py --plan)은 '${{ steps.check.outputs.plan }}' 이다."
