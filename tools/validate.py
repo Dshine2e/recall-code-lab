@@ -8,7 +8,7 @@
   python3 tools/validate.py --build-manifest        # problems/manifest.json 다시 만들기
 
 --only 를 주면 문제 단위 검사(필드, 힌트, 정답 실행)는 그 문제들에만 한다.
-파일 단위 검사(manifest, id 중복, 하루 3문제 규칙)는 항상 전체에 한다.
+파일 단위 검사(manifest, id 중복, 하루 10문제·주제 중복 규칙)는 항상 전체에 한다.
 
 채점 규칙(사이트와 동일): 각 줄 오른쪽 공백을 지우고, 끝의 빈 줄을 무시한 뒤 비교한다.
 """
@@ -42,7 +42,9 @@ CATEGORIES = ["기초 문법", "알고리즘", "백준형", "기본기"]
 CATEGORY_OF = {"입문": "기초 문법", "기본": "알고리즘", "도전": "백준형"}
 BASE_IDS = ["bfs", "dfs", "hash", "heap", "deque", "sort", "string", "index"]
 DATE_FILE = re.compile(r"^(\d{4}-\d{2}-\d{2})\.json$")
-DAILY_ID = re.compile(r"^daily-(\d{4}-\d{2}-\d{2})-([1-3])$")
+DAILY_ID = re.compile(r"^daily-(\d{4}-\d{2}-\d{2})-([1-9]|10)$")
+# 하루 문제 수: 예전 파일은 3개, DAILY_TEN_FROM 부터는 10개
+DAILY_TEN_FROM = "2026-11-18"
 SEED_FILE = re.compile(r"^seed-(\d{2})\.json$")
 SEED_ID = re.compile(r"^seed-(\d{3})$")
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -171,8 +173,11 @@ def check_file_level(rep: Report, items: list[tuple[Path, dict]]) -> None:
         m = DATE_FILE.match(name)
         if not m:
             continue
-        if len(plist) != 3:
-            rep.error(f"{name}: 하루 문제는 3개여야 합니다 (현재 {len(plist)}개)")
+        want_n = 10 if m.group(1) >= DAILY_TEN_FROM else 3
+        if len(plist) not in ({3, 10} if m.group(1) == "2026-11-17" else {want_n}):
+            rep.error(f"{name}: 하루 문제는 {want_n}개여야 합니다 (현재 {len(plist)}개)")
+        if len(plist) == 10:
+            check_daily_topics(rep, name, plist)
         ranks = [DIFFICULTIES.index(p.get("difficulty")) if p.get("difficulty") in DIFFICULTIES else -1
                  for p in plist]
         if ranks != sorted(ranks):
@@ -181,6 +186,23 @@ def check_file_level(rep: Report, items: list[tuple[Path, dict]]) -> None:
             want = f"daily-{m.group(1)}-{i}"
             if p.get("id") != want:
                 rep.error(f"{name}: {i}번째 문제 id는 {want} 이어야 합니다 (현재 {p.get('id')})")
+
+
+def check_daily_topics(rep: Report, name: str, plist: list) -> None:
+    """하루 10문제는 주제가 겹치면 안 된다: topic 문자열도, tools/topics.json 의 주제 묶음도 서로 달라야 한다."""
+    pool = json.loads((ROOT / "tools" / "topics.json").read_text(encoding="utf-8"))
+    seen_topic, seen_family = {}, {}
+    for p in plist:
+        pid, topic, diff = p.get("id"), str(p.get("topic") or "").strip(), p.get("difficulty")
+        if topic.lower() in seen_topic:
+            rep.error(f"{name}: {pid} 와 {seen_topic[topic.lower()]} 의 topic 이 같습니다 ({topic})")
+        seen_topic[topic.lower()] = pid
+        fam = next((f["name"] for f in pool.get(diff, []) if any(k.lower() in topic.lower() for k in f["keys"])), None)
+        if fam is None:
+            continue
+        if (diff, fam) in seen_family:
+            rep.error(f"{name}: {pid} 와 {seen_family[(diff, fam)]} 가 같은 주제 묶음입니다 ({diff} / {fam})")
+        seen_family[(diff, fam)] = pid
 
 
 def check_hints(rep: Report, where: str, hints) -> None:

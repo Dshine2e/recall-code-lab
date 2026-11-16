@@ -4,16 +4,16 @@ GitHub Pages(main / 루트)로 배포하는 빌드 없는 정적 사이트(HTML/
 
 ## 구조
 - `index.html`, `assets/css/style.css`, `assets/js/*.js` — 사이트(ES 모듈). `assets/vendor/codemirror/` — CodeMirror 5.65.16
-- `problems/<YYYY-MM-DD>.json` — 그날 문제 3개(입문→기본→도전), `problems/seed-NN.json` — 한꺼번에 채운 문제(파일당 3~8개, 입문→기본→도전), `problems/base.json` — 기본기 8개, `problems/manifest.json` — `{"files":[...]}` (날짜 파일 최신 먼저 → seed 번호 순 → base.json 마지막). 사이트는 파일 순서가 아니라 addedOn 내림차순(null 맨 뒤)으로 보여 준다.
+- `problems/<YYYY-MM-DD>.json` — 그날 문제 10개(입문→기본→도전. 2026-11-17 이전 파일은 3개), `problems/seed-NN.json` — 한꺼번에 채운 문제(파일당 3~8개, 입문→기본→도전), `problems/base.json` — 기본기 8개, `problems/manifest.json` — `{"files":[...]}` (날짜 파일 최신 먼저 → seed 번호 순 → base.json 마지막). 사이트는 파일 순서가 아니라 addedOn 내림차순(null 맨 뒤)으로 보여 준다.
 - `concepts/<slug>.json` — 개념서 항목, `concepts/manifest.json` — `{"concepts":[{slug,title,category,summary,topics}]}` (validate_concepts.py --build-manifest 가 만든다)
 - `.solutions/<id>.py`, `.solutions/<id>.cpp` — 검증된 정답, `.solutions/<id>.gen.py` — 최대 크기 입력 생성기
-- `tools/validate.py` — 스키마·힌트 검사 + 정답 실행 검증(표준 라이브러리만). `tools/validate_concepts.py` — 개념서 스키마 검사 + 예제 실제 실행. `tools/stats.py` — 난이도별 개수·비율(목표 50개 = 입문 15 / 기본 25 / 도전 10)
+- `tools/validate.py` — 스키마·힌트 검사 + 정답 실행 검증(표준 라이브러리만). `tools/validate_concepts.py` — 개념서 스키마 검사 + 예제 실제 실행. `tools/stats.py` — 난이도별 개수·비율, 다음 날 난이도 조합(`--plan`)과 추천 주제(`--suggest`). `tools/topics.json` — 난이도별 주제 묶음(추천과 같은 날 중복 검사에 쓴다)
 - `tests/e2e.cjs` — 로컬 Playwright 화면 테스트
 - `.github/workflows/daily-problems.yml` — 매일 03:00 KST에 아래 절차를 실행
 
 ## 문제 데이터 형식
 문제 객체: `{ id, title, category, topic, syntax, difficulty, minutes, addedOn, description, tests:[{label,input,output}], python, cpp, hints:[3개] }`
-- `id` = `daily-YYYY-MM-DD-N` (N=1~3). `addedOn` = 파일 날짜.
+- `id` = `daily-YYYY-MM-DD-N` (N=1~10, 파일 안 순서대로). `addedOn` = 파일 날짜.
 - seed 문제: `id` = `seed-NNN`(seed-001부터 이어서), `addedOn` = 만든 날짜(KST). 그 밖의 규칙(엄격 규칙 포함)은 일일 문제와 같다.
 - `hints` = 정확히 3개의 한국어 문자열(각 2~4문장, 600자 이하). 1) 어떤 알고리즘/자료구조를 쓰는지와 왜 맞는지 2) 핵심 아이디어와 처리 순서를 말로 3) 놓치기 쉬운 점과 목표 시간 복잡도. 코드·의사코드·정답에 가까운 구체적인 식은 쓰지 않는다(함수 이름 언급은 괜찮다). validate.py 가 개수·길이·코드 흔적(``` , `def `, `#include`, `for (`, `print(` 등)을 검사한다.
 - `difficulty` = 입문 | 기본 | 도전, `category` = 기초 문법(입문) | 알고리즘(기본) | 백준형(도전) | 기본기
@@ -62,8 +62,12 @@ GitHub Pages(main / 루트)로 배포하는 빌드 없는 정적 사이트(HTML/
 ## 일일 문제 생성 절차
 
 1. 날짜는 `TZ=Asia/Seoul date +%F`. problems/<날짜>.json이 이미 있으면 아무것도 하지 않고 종료한다(멱등).
-2. manifest와 최근 14일 문제의 title/topic을 읽고, 같은 주제·비슷한 설정을 반복하지 않는다. 오래 안 다룬 주제를 우선한다.
-3. 누적 비율이 입문:기본:도전 = 3:5:2에 가까워지도록 부족한 난이도부터 하루 3문제를 고른다. 난이도 조합은 `python3 tools/stats.py --plan` 이 출력한 그대로 쓴다(예: "입문 기본 기본"). 파일 안에서는 입문→기본→도전 순으로 놓고, 같은 난이도가 2개면 주제를 서로 다르게 한다. 난이도별 기준은 아래와 같다.
+2. manifest와 최근 14일 문제의 title/topic을 읽고(`python3 tools/stats.py --topics`), 같은 주제·비슷한 설정·비슷한 이야기 소재를 반복하지 않는다.
+3. 누적 비율이 입문:기본:도전 = 3:5:2에 가까워지도록 부족한 난이도부터 하루 10문제를 고른다. 난이도 조합은 `python3 tools/stats.py --plan` 이 출력한 그대로 쓴다(보통 입문 3 · 기본 5 · 도전 2). 파일 안에서는 입문→기본→도전 순으로 놓는다.
+   - 주제는 `python3 tools/stats.py --suggest` 가 추천한 주제 묶음(난이도별로 가장 오래 안 나온 것)을 그대로 쓴다. 추천 묶음으로 좋은 문제가 안 나올 때만, 최근 7일 동안 나오지 않은 다른 묶음이나 `tools/topics.json` 에 없는 새 주제로 바꾼다.
+   - 같은 날 10문제는 유형이 서로 겹치지 않아야 한다. topic 문자열도, 주제 묶음도 모두 달라야 하고(validate.py 가 검사), 난이도가 달라도 같은 풀이 아이디어를 되풀이하지 않는다(예: 기본 "이분 탐색"과 도전 "파라메트릭 서치"를 같은 날 내지 않는다).
+   - `topic` 은 "묶음 이름(구체적인 기법)" 꼴로 적어 주제 묶음과 이어지게 한다(예: "투 포인터(정렬 후 양끝에서)").
+   - 난이도별 기준은 아래와 같다.
    - 입문 / 기초 문법 / 10~15분: 조건문, 반복문, 문자열, 리스트, 입출력, 간단한 구현. N ≤ 100.
    - 기본 / 알고리즘 / 20~30분: 정렬, 이분 탐색, 투 포인터, 스택·큐·덱, 해시, 누적 합, 그리디, BFS/DFS. N이 커서(약 2×10^5) 정해 복잡도가 필요하다.
    - 도전 / 백준형 / 40~60분: DP, 최단 경로, 유니온 파인드, 세그먼트 트리/펜윅, 비트마스크, 복합 구현 중 하나. 짧은 이야기 + 엄밀한 제약.
@@ -71,15 +75,16 @@ GitHub Pages(main / 루트)로 배포하는 빌드 없는 정적 사이트(HTML/
 4. 직접 만든 창작 문제로 한다(백준·프로그래머스 문제 본문을 가져오지 말 것). 정답은 입력당 하나로 유일해야 하고(스페셜 저지 불필요), 제약·입출력 형식·경계 값을 빠짐없이 적는다. Python과 C++ 모두로 풀 수 있어야 하고, C++에서 long long이 필요하면 제약에 명시한다. `syntax`에는 두 언어에서 자주 틀리는 포인트(long long, 1-based 인덱스, append 인자 등)를 적는다.
 5. 테스트는 입문·기본 4~5개, 도전 5~6개. label은 "기본:", "경계:", "반례:"로 시작한다. 경계·반례는 흔한 실수(off-by-one, 오버플로, 같은 값, 빈/최소 입력)를 겨냥한다. 기대 출력은 손으로 쓰지 말고 검증된 정답 코드를 실행해서 만든다.
 6. 정답을 Python과 C++로 각각 독립적으로 작성해 .solutions/<id>.py / .cpp 에 저장한다. 기본·도전은 최대 크기 입력 생성기 .solutions/<id>.gen.py 도 만든다. 도전은 브루트포스로 작은 무작위 입력 수십 개를 교차 검증한다.
-7. `python3 tools/validate.py --only <새 id들> --require-solutions` 가 통과할 때까지 고친다. 한 문제가 3번 시도해도 통과하지 못하면 다른 문제로 교체한다. 검증을 통과하지 못한 문제는 절대 커밋하지 않는다. 3문제를 못 채우면 아무것도 커밋하지 않고 실패로 종료한다.
-8. problems/<날짜>.json 저장 후 `python3 tools/validate.py --build-manifest` 를 실행하고, `python3 tools/stats.py` 결과를 마지막 메시지(로그)에 남긴다. 변경은 problems/ 와 .solutions/ (그리고 9번의 concepts/) 안에서만 하고, 커밋 메시지 "daily: <날짜> 문제 3개 추가 (<난이도 조합, 예: 입문/기본/기본>)" 로 main에 푸시한다.
-9. 새 문제의 topic 과 이어지는 개념서 항목이 없으면(`python3 tools/validate_concepts.py --coverage --schema-only` 로 확인) 기존 항목의 topics 에 문자열을 더하거나 새 항목을 concepts/ 에 추가한다. 추가했다면 `python3 tools/validate_concepts.py --build-manifest` 가 통과해야 커밋에 넣는다. 개념서 추가가 실패하면 concepts/ 변경을 되돌리고 문제만 커밋한다(문제 커밋을 막지 않는다).
+7. `python3 tools/validate.py --only <새 id들> --require-solutions` 가 통과할 때까지 고친다. 한 문제가 3번 시도해도 통과하지 못하면 다른 문제로 교체한다. 검증을 통과하지 못한 문제는 절대 커밋하지 않는다. 10문제를 못 채우면 아무것도 커밋하지 않고 실패로 종료한다.
+8. problems/<날짜>.json 저장 후 `python3 tools/validate.py --build-manifest` 를 실행하고, `python3 tools/stats.py` 결과를 마지막 메시지(로그)에 남긴다. 변경은 problems/ 와 .solutions/ (그리고 9번의 concepts/) 안에서만 하고, 커밋 메시지 "daily: <날짜> 문제 10개 추가 (<난이도별 개수, 예: 입문3/기본5/도전2>)" 로 main에 푸시한다.
+9. 새 문제가 개념서에 없는 개념(알고리즘·자료구조·문법)을 쓰면 그 개념의 새 항목을 concepts/ 에 추가한다(예제는 실제 실행 결과). 이미 있는 개념인데 연결만 안 된 경우(`python3 tools/validate_concepts.py --coverage --schema-only` 로 확인)에는 기존 항목의 topics 에 문자열을 더한다. 억지로 관련 없는 항목에 연결하지 않는다. 추가했다면 `python3 tools/validate_concepts.py --build-manifest` 가 통과해야 커밋에 넣는다. 개념서 추가가 실패하면 concepts/ 변경을 되돌리고 문제만 커밋한다(문제 커밋을 막지 않는다).
 
 ### 절차 실행 참고
 - 기대 출력 생성, 브루트포스 비교 같은 임시 스크립트는 저장소 밖(`/tmp` 등)에 둔다. 저장소에는 problems/ 와 .solutions/ (개념서를 추가했다면 concepts/) 변경만 남긴다.
 - 생성기(`.gen.py`)는 시드를 고정해 항상 같은 입력을 출력하게 하고, 입력 크기는 제약의 최댓값으로 맞춘다. 검증 시간 제한은 Python 5초, C++ 2초다.
 - 스케줄러(GitHub Actions)에서 실행될 때 main 푸시가 막히면 커밋까지만 하고 끝내도 된다. 워크플로 후처리 단계가 경로 제한과 전체 검증을 다시 확인한 뒤 main에 푸시한다.
-- 일일 파일 규칙(validate.py): 정확히 3문제, id 는 daily-<날짜>-1~3, 난이도 오름차순. 같은 난이도가 여러 개여도 된다.
+- 일일 파일 규칙(validate.py): 정확히 10문제(2026-11-17 이전 파일은 3문제), id 는 daily-<날짜>-1~10, 난이도 오름차순, 같은 날 topic·주제 묶음 중복 금지.
+- 10문제를 한 번에 만들지 말고 한 문제씩 정답·테스트·검증까지 끝낸 뒤 다음 문제로 넘어간다.
 - 실패로 끝낼 때는 마지막 메시지에 이유(어느 문제가 어떤 검증에서 막혔는지)를 적는다.
 
 ## 로컬 개발
