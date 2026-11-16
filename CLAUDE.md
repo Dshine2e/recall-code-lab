@@ -1,14 +1,14 @@
 # recall · 코딩테스트 복습실
 
-GitHub Pages(main / 루트)로 배포하는 빌드 없는 정적 사이트(HTML/CSS/JS). 주소가 `/recall-code-lab/` 하위라서 모든 경로는 상대경로로 쓴다.
+Vercel 에 배포하는 Next.js(App Router) + TypeScript + Tailwind 사이트. 문제·개념서는 저장소의 JSON 파일이 원본이고, DB(Neon Postgres, Drizzle)에는 사용자와 풀이 기록만 둔다. main 에 푸시하면 Vercel 이 다시 배포한다.
 
 ## 구조
-- `index.html`, `assets/css/style.css`, `assets/js/*.js` — 사이트(ES 모듈). `assets/vendor/codemirror/` — CodeMirror 5.65.16
+- `app/` — 화면(문제 목록 `/`, 풀이 `/problems/[id]`, 개념서 `/concepts`, `/login`, `/signup`, `/me`). `components/` — 화면 컴포넌트. `lib/` — 문제 로더(`problems.ts`), 인증(`auth.ts`, Auth.js Credentials + bcrypt), 로그인 시도 제한(`rate-limit.ts`), 기록 저장 서버 액션(`actions/`), 코드 실행(`runner.js`, Wandbox). `lib/db/schema.ts` + `drizzle/` — DB 스키마와 마이그레이션
 - `problems/<YYYY-MM-DD>.json` — 그날 문제 10개(입문→기본→도전. 2026-11-17 이전 파일은 3개), `problems/seed-NN.json` — 한꺼번에 채운 문제(파일당 3~8개, 입문→기본→도전), `problems/base.json` — 기본기 8개, `problems/manifest.json` — `{"files":[...]}` (날짜 파일 최신 먼저 → seed 번호 순 → base.json 마지막). 사이트는 파일 순서가 아니라 addedOn 내림차순(null 맨 뒤)으로 보여 준다.
 - `concepts/<slug>.json` — 개념서 항목, `concepts/manifest.json` — `{"concepts":[{slug,title,category,summary,topics}]}` (validate_concepts.py --build-manifest 가 만든다)
 - `.solutions/<id>.py`, `.solutions/<id>.cpp` — 검증된 정답, `.solutions/<id>.gen.py` — 최대 크기 입력 생성기
 - `tools/validate.py` — 스키마·힌트 검사 + 정답 실행 검증(표준 라이브러리만). `tools/validate_concepts.py` — 개념서 스키마 검사 + 예제 실제 실행. `tools/stats.py` — 난이도별 개수·비율, 다음 날 난이도 조합(`--plan`)과 추천 주제(`--suggest`). `tools/topics.json` — 난이도별 주제 묶음(추천과 같은 날 중복 검사에 쓴다)
-- `tests/e2e.cjs` — 로컬 Playwright 화면 테스트
+- `tests/e2e.cjs` — 로컬 Playwright 화면 테스트(가입·로그인·기록 저장 포함)
 - `.github/workflows/daily-problems.yml` — 매일 03:00 KST에 아래 절차를 실행
 
 ## 문제 데이터 형식
@@ -89,6 +89,9 @@ GitHub Pages(main / 루트)로 배포하는 빌드 없는 정적 사이트(HTML/
 
 ## 로컬 개발
 - 검증: `python3 tools/validate.py --require-solutions` (Windows에서는 MSYS2 `C:\msys64\ucrt64\bin\python3.exe`)
-- 화면 테스트: `npm i --no-save playwright-core` 후 `node tests/e2e.cjs` (Chrome 필요, Wandbox는 로컬 python3/g++ 목으로 대체)
+- 사이트 실행: `npm install` 후 `npm run dev`. `.env.local` 에 `AUTH_SECRET` 이 필요하다(`.env.example` 참고). `DATABASE_URL` 이 없으면 `.data/` 의 내장 DB(PGlite)를 쓴다.
+- 화면 테스트: `PGLITE_DIR=.data/e2e npx next dev -p 3100` 으로 빈 DB 서버를 띄우고, `npm i --no-save playwright-core` 후 `node tests/e2e.cjs` (Chrome 필요, Wandbox 호출은 가로챈다).
+- DB 스키마를 바꾸면 `npm run db:generate` 로 마이그레이션을 만들어 함께 커밋한다. Vercel 빌드(`vercel-build`)가 마이그레이션을 자동 적용한다.
 - Windows Git Bash에는 tz 데이터가 없어 `TZ=Asia/Seoul date +%F`가 UTC 날짜를 낸다. 로컬에서는 `C:\msys64\usr\bin\date.exe`나 `python3 -c "import datetime,zoneinfo;print(datetime.datetime.now(zoneinfo.ZoneInfo('Asia/Seoul')).date())"`로 확인한다.
-- 사이트 수정 시 상대경로 유지, 외부 의존은 Pretendard(jsDelivr)와 Wandbox API뿐이다.
+- 기록을 읽고 쓰는 코드는 항상 서버 세션(`currentUser()`)의 사용자 id 를 쓴다. 브라우저가 보낸 사용자 id 는 받지 않는다. 문제 id 는 바꾸지 않는다(기록이 이 id 에 연결된다).
+- `.env*` 는 커밋하지 않는다(`.env.example` 만 예외). 외부 의존은 Pretendard(jsDelivr)와 Wandbox API 다.
