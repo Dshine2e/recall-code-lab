@@ -13,7 +13,8 @@
   ],
   "topics": [
     "DP",
-    "LIS"
+    "LIS",
+    "점화식"
   ],
   "python": {
     "items": [
