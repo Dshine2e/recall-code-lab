@@ -1,0 +1,220 @@
+{
+  "slug": "conditionals",
+  "title": "조건문과 비교",
+  "category": "기초 문법",
+  "order": 3,
+  "summary": "if·elif(else if) 순서, 범위 비교와 논리 연산자, 조건 표현식(삼항), 비율 계산을 정수로 하기",
+  "when": [
+    "값이 어느 구간에 속하는지에 따라 다른 값을 정할 때",
+    "여러 조건을 함께(그리고/또는) 확인할 때",
+    "격자·배열 인덱스가 범위 안인지 먼저 확인할 때",
+    "짧은 두 갈래 선택을 한 줄로 쓰고 싶을 때"
+  ],
+  "topics": [
+    "조건 분기"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "if / elif / else",
+        "signature": "if 조건1:\n    ...\nelif 조건2:\n    ...\nelse:\n    ...",
+        "does": "위에서부터 처음으로 참인 블록 하나만 실행하고 나머지는 건너뛰어요.",
+        "when": "값을 겹치지 않는 구간으로 나눌 때 써요. 구간은 큰 기준부터(또는 작은 기준부터) 한 방향으로 늘어놓아요.",
+        "complexity": "O(조건 수)"
+      },
+      {
+        "name": "비교 연결",
+        "signature": "lo <= x <= hi\n0 <= r < h",
+        "does": "lo <= x and x <= hi 와 같아요. Python 에서만 이렇게 이어 쓸 수 있어요.",
+        "when": "범위 안인지 확인할 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "and / or / not",
+        "signature": "a and b, a or b, not a",
+        "does": "단락 평가를 해요. and 는 앞이 거짓이면, or 는 앞이 참이면 뒤를 계산하지 않아요.",
+        "when": "범위 검사를 앞에 두고 인덱싱을 뒤에 두면 IndexError 를 막을 수 있어요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "조건 표현식",
+        "signature": "a if 조건 else b",
+        "does": "조건이 참이면 a, 아니면 b 를 값으로 돌려줘요.",
+        "when": "두 갈래 중 하나를 골라 변수에 넣거나 출력할 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "in (여러 값 중 하나)",
+        "signature": "x in (1, 3, 7)",
+        "does": "x 가 튜플·리스트·집합 안에 있는지 확인해요.",
+        "when": "x == 1 or x == 3 or x == 7 를 짧게 쓸 때 써요.",
+        "complexity": "튜플·리스트 O(길이), 집합 평균 O(1)"
+      },
+      {
+        "name": "문자열 비교",
+        "signature": "s == 'YES', a < b",
+        "does": "== 는 내용이 같은지, < 는 사전순(문자 코드 순)으로 비교해요.",
+        "when": "명령어·요일 같은 입력 단어를 구분할 때 써요. 숫자 문자열끼리 < 는 수 크기가 아니라 사전순이에요.",
+        "complexity": "O(문자열 길이)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "점수 구간 나누기: 큰 기준부터 elif",
+        "code": "n = int(input())\nfor s in map(int, input().split()):\n    if s >= 90:\n        g = 'A'\n    elif s >= 80:\n        g = 'B'\n    elif s >= 60:\n        g = 'C'\n    else:\n        g = 'F'\n    print(s, g)\n",
+        "stdin": "5\n100 90 89 60 59\n",
+        "output": "100 A\n90 A\n89 B\n60 C\n59 F\n"
+      },
+      {
+        "title": "범위 검사, and 단락 평가, 조건 표현식",
+        "code": "grid = ['..#', '#..']\nh, w = len(grid), len(grid[0])\n\ndef free(r, c):\n    # 범위를 먼저 확인해야 인덱스 오류가 나지 않아요(and 는 앞이 False 면 뒤를 안 봐요)\n    return 0 <= r < h and 0 <= c < w and grid[r][c] == '.'\n\nfor r, c in [(0, 0), (0, 2), (2, 0), (-1, 1), (1, 2)]:\n    print(r, c, free(r, c))\n\nx = 7\nprint('홀수' if x % 2 else '짝수')\nprint(x in (1, 3, 7), x == 1 or x == 2)\n",
+        "output": "0 0 True\n0 2 False\n2 0 False\n-1 1 False\n1 2 True\n홀수\nTrue False\n"
+      },
+      {
+        "title": "정수로 하는 비율 계산과 문자열 비교",
+        "code": "price = 8000\nprint(price * 0.8, price * 8 // 10)\nprint(int(0.29 * 100), 29 * 100 // 100)\nday = input().strip()\nprint(day == 'WEEKEND', 'apple' < 'banana', 'Z' < 'a', '10' < '9')\n",
+        "stdin": "WEEKEND\n",
+        "output": "6400.0 6400\n28 29\nTrue True True True\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "if s >= 60:\n    g = 'C'\nelif s >= 90:\n    g = 'A'  # 95 점도 C",
+        "right": "if s >= 90:\n    g = 'A'\nelif s >= 60:\n    g = 'C'",
+        "why": "elif 는 앞 조건이 거짓일 때만 검사해요. 넓은 조건을 먼저 두면 좁은 조건에 영영 닿지 않아요."
+      },
+      {
+        "wrong": "if x == 1 or 2:  # x 가 3 이어도 참",
+        "right": "if x == 1 or x == 2:\n# 또는 if x in (1, 2):",
+        "why": "x == 1 or 2 는 (x == 1) or 2 라서 x == 1 이 거짓이면 값 2(참)가 돼요."
+      },
+      {
+        "wrong": "pay = int(price * 0.29)  # price=100 이면 28",
+        "right": "pay = price * 29 // 100",
+        "why": "0.29 * 100 은 28.999999999999996 이라 int 로 자르면 28 이 돼요. 퍼센트 계산은 정수로 곱한 뒤 나누세요."
+      },
+      {
+        "wrong": "if g[r][c] == '.' and 0 <= r < h and 0 <= c < w:",
+        "right": "if 0 <= r < h and 0 <= c < w and g[r][c] == '.':",
+        "why": "인덱싱을 먼저 하면 범위 밖에서 IndexError 가 나거나, 음수 인덱스라 반대쪽 끝 칸을 읽어요. 범위 검사를 앞에 두세요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "if / else if / else",
+        "signature": "if (조건1) { ... }\nelse if (조건2) { ... }\nelse { ... }",
+        "does": "위에서부터 처음으로 참인 블록 하나만 실행해요.",
+        "when": "값을 겹치지 않는 구간으로 나눌 때 써요. 한 줄짜리라도 중괄호를 쓰면 실수가 줄어요.",
+        "complexity": "O(조건 수)"
+      },
+      {
+        "name": "&& / || / !",
+        "signature": "a && b, a || b, !a",
+        "does": "단락 평가를 해요. && 는 앞이 false 면, || 는 앞이 true 면 뒤를 계산하지 않아요.",
+        "when": "범위 검사를 앞에 두고 배열 접근을 뒤에 둘 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "범위 비교",
+        "signature": "lo <= x && x <= hi",
+        "does": "두 비교를 && 로 이어요. lo <= x <= hi 는 Python 과 뜻이 달라요.",
+        "when": "범위 안인지 확인할 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "삼항 연산자",
+        "signature": "조건 ? a : b",
+        "does": "조건이 참이면 a, 아니면 b 를 값으로 돌려줘요.",
+        "when": "두 갈래 중 하나를 골라 변수에 넣거나 출력할 때 써요. 두 값의 자료형을 맞추세요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "switch",
+        "signature": "switch (c) { case 'U': ...; break; default: ...; }",
+        "does": "정수·문자 값에 따라 갈래를 나눠요. break 가 없으면 다음 case 로 이어서 실행돼요.",
+        "when": "방향 문자, 명령 번호처럼 값이 몇 개로 정해진 경우에 써요. string 에는 쓸 수 없어요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "string 비교",
+        "signature": "s == \"YES\", a < b",
+        "does": "std::string 끼리(또는 string 과 문자열 상수) 내용을 비교해요. < 는 사전순이에요.",
+        "when": "입력 단어를 구분할 때 써요. char 배열(const char*)끼리 == 는 주소 비교라 쓰면 안 돼요.",
+        "complexity": "O(문자열 길이)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "점수 구간 나누기: 큰 기준부터 else if",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n;\n    cin >> n;\n    for (int i = 0; i < n; i++) {\n        int s;\n        cin >> s;\n        char g;\n        if (s >= 90) g = 'A';\n        else if (s >= 80) g = 'B';\n        else if (s >= 60) g = 'C';\n        else g = 'F';\n        cout << s << ' ' << g << '\\n';\n    }\n    return 0;\n}\n",
+        "stdin": "5\n100 90 89 60 59\n",
+        "output": "100 A\n90 A\n89 B\n60 C\n59 F\n"
+      },
+      {
+        "title": "범위 검사, && 단락 평가, 삼항 연산자",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nvector<string> grid = {\"..#\", \"#..\"};\nint h = 2, w = 3;\n\nbool freeCell(int r, int c) {\n    // 범위를 먼저 확인해야 범위 밖 접근이 없어요(&& 는 앞이 false 면 뒤를 안 봐요)\n    return 0 <= r && r < h && 0 <= c && c < w && grid[r][c] == '.';\n}\n\nint main() {\n    int qs[5][2] = {{0, 0}, {0, 2}, {2, 0}, {-1, 1}, {1, 2}};\n    for (auto &q : qs) cout << q[0] << ' ' << q[1] << ' ' << boolalpha << freeCell(q[0], q[1]) << '\\n';\n    int x = 7;\n    cout << (x % 2 ? \"홀수\" : \"짝수\") << '\\n';\n    int y = 50;\n    cout << (0 <= y <= 10) << ' ' << (0 <= y && y <= 10) << '\\n';\n    return 0;\n}\n",
+        "output": "0 0 true\n0 2 false\n2 0 false\n-1 1 false\n1 2 true\n홀수\ntrue false\n"
+      },
+      {
+        "title": "정수로 하는 비율 계산과 string 비교",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int price = 8000;\n    cout << price * 0.8 << ' ' << price * 8 / 10 << '\\n';\n    double p = 0.29;\n    cout << (int)(p * 100) << ' ' << 29 * 100 / 100 << '\\n';\n    string day;\n    cin >> day;\n    cout << boolalpha << (day == \"WEEKEND\") << ' ' << (string(\"apple\") < \"banana\") << ' '\n         << (string(\"10\") < \"9\") << '\\n';\n    return 0;\n}\n",
+        "stdin": "WEEKEND\n",
+        "output": "6400 6400\n28 29\ntrue true true\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "if (0 <= x <= 10)  // x = 50 이어도 참",
+        "right": "if (0 <= x && x <= 10)",
+        "why": "(0 <= x) 가 먼저 계산돼 true(1) 또는 false(0)가 되고, 그 값은 항상 10 이하라 결과가 늘 참이에요."
+      },
+      {
+        "wrong": "if (y = 0)  // 비교하려고",
+        "right": "if (y == 0)",
+        "why": "= 는 대입이에요. y 에 0 을 넣고 그 값 0(거짓)으로 판단해서, 조건이 틀릴 뿐 아니라 y 도 바뀌어요. -Wall 로 컴파일하면 경고가 나와요."
+      },
+      {
+        "wrong": "int pay = (int)(price * 0.29);  // price=100 이면 28",
+        "right": "int pay = price * 29 / 100;",
+        "why": "0.29 는 double 로 정확히 표현되지 않아 28.999… 이 되고 (int) 는 버림이라 28 이에요. 퍼센트 계산은 정수로 곱한 뒤 나누세요(곱이 크면 long long)."
+      },
+      {
+        "wrong": "if (a == b == c)  // 셋이 같은지",
+        "right": "if (a == b && b == c)",
+        "why": "(a == b) 가 1 또는 0 이 된 뒤 c 와 비교해요. a, b, c 가 모두 2 여도 결과는 거짓(0)이에요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "값을 여러 구간으로 나눠 다른 값을 정해요",
+      "use": "if-elif(else if) 사슬, 경계를 한 방향(큰 기준부터 또는 작은 기준부터)으로 정렬"
+    },
+    {
+      "situation": "두 값 중 하나를 골라 바로 대입·출력해요",
+      "use": "Python a if 조건 else b / C++ 조건 ? a : b"
+    },
+    {
+      "situation": "x 가 정해진 몇 개 값 중 하나인지 봐요",
+      "use": "Python x in (…) / C++ switch 또는 각각 == 를 || 로 연결"
+    },
+    {
+      "situation": "격자 칸이나 배열 인덱스를 확인해요",
+      "use": "범위 검사를 앞에, 값 확인을 뒤에 둔 and(&&) 한 줄"
+    },
+    {
+      "situation": "퍼센트 할인·비율을 계산해요",
+      "use": "실수 곱셈 대신 정수로 곱한 뒤 나누기(값이 크면 long long)"
+    }
+  ],
+  "checklist": [
+    "경계 값(정확히 기준과 같은 값)이 어느 구간에 들어가는지 문제와 맞췄나요?",
+    "elif(else if) 순서 때문에 닿지 않는 갈래가 없나요?",
+    "C++ 에서 lo <= x <= hi 나 if (x = 0) 처럼 쓰지 않았나요?",
+    "or/|| 로 이은 비교마다 변수를 다시 썼나요?",
+    "범위 검사를 인덱싱보다 앞에 두었나요?",
+    "비율 계산을 실수로 하고 int 로 잘라 버리지 않았나요?"
+  ]
+}
