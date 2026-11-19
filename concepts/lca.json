@@ -1,0 +1,181 @@
+{
+  "slug": "lca",
+  "title": "최소 공통 조상(LCA)",
+  "category": "그래프",
+  "order": 6,
+  "summary": "트리에서 두 정점의 가장 가까운 공통 조상을 2^k 조상 표로 O(log N)에 찾고, 경로 길이·경로 위 판별에 써요.",
+  "when": [
+    "트리에서 두 정점 사이 거리(간선 수나 가중치 합)를 여러 번 물을 때",
+    "어떤 정점이 두 정점 사이 경로 위에 있는지 확인할 때",
+    "한 정점이 다른 정점의 조상인지 빠르게 확인할 때",
+    "정점 k 칸 위의 조상을 빠르게 찾을 때"
+  ],
+  "topics": [
+    "LCA",
+    "공통 조상"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "부모·깊이 구하기(BFS)",
+        "signature": "up[0][to] = v\ndepth[to] = depth[v] + 1\ndist[to] = dist[v] + w",
+        "does": "루트에서 BFS 로 내려가며 각 정점의 부모, 깊이, 루트로부터의 거리를 채워요.",
+        "when": "LCA 표를 만들기 전에 한 번 해요. 일직선 트리도 있으니 재귀 대신 반복문으로 해요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "2^k 조상 표",
+        "signature": "for k in range(1, LOG):\n    for v in range(1, n + 1):\n        up[k][v] = up[k - 1][up[k - 1][v]]",
+        "does": "2^k 칸 위 조상은 2^(k-1) 칸 위로 두 번 올라간 곳이에요. 루트의 부모는 자기 자신으로 둬요.",
+        "when": "LOG 는 2^LOG > N 이 되게 잡아요(N = 10^5 이면 17).",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "lca(a, b)",
+        "signature": "def lca(a, b):  # 깊이 맞추기 → 함께 올리기",
+        "does": "더 깊은 쪽을 깊이 차이만큼 올린 뒤, 두 정점의 2^k 조상이 다를 때만 함께 올려요. 마지막에 한 칸 위가 답이에요.",
+        "when": "두 정점이 갈라지는 지점이 필요할 때 써요.",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "두 정점 거리",
+        "signature": "dist[a] + dist[b] - 2 * dist[lca(a, b)]",
+        "does": "루트까지 거리 둘을 더하면 LCA 위쪽이 두 번 들어가니 그만큼 빼요.",
+        "when": "가중치 트리의 경로 길이, 가중치가 없으면 depth 로 간선 수를 구해요.",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "진입·탈출 시각",
+        "signature": "tin[a] <= tin[b] and tout[b] <= tout[a]",
+        "does": "DFS 에서 들어간 시각과 나온 시각을 적어 두면 a 가 b 의 조상(자기 자신 포함)인지 O(1)에 알 수 있어요.",
+        "when": "조상 판별, 서브트리 판별, 경로 위 판별에 써요.",
+        "complexity": "전처리 O(N), 판별 O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "2^k 조상 표로 LCA 와 두 정점 거리",
+        "code": "import sys\nfrom collections import deque\n\ninput = sys.stdin.readline\n\nn = int(input())\ngraph = [[] for _ in range(n + 1)]\nfor _ in range(n - 1):\n    a, b, w = map(int, input().split())\n    graph[a].append((b, w))\n    graph[b].append((a, w))\n\nLOG = max(1, n.bit_length())             # 2^LOG > n 이면 충분\ndepth = [0] * (n + 1)\ndist = [0] * (n + 1)                     # 루트(1)에서의 거리\nup = [[0] * (n + 1) for _ in range(LOG)] # up[k][v] = v 의 2^k 번째 조상\nup[0][1] = 1                             # 루트의 부모는 자기 자신\nseen = [False] * (n + 1)\nseen[1] = True\nq = deque([1])\nwhile q:                                 # 재귀 대신 BFS 로 부모·깊이 구하기\n    v = q.popleft()\n    for to, w in graph[v]:\n        if not seen[to]:\n            seen[to] = True\n            up[0][to] = v\n            depth[to] = depth[v] + 1\n            dist[to] = dist[v] + w\n            q.append(to)\nfor k in range(1, LOG):                  # k 를 바깥 반복으로\n    for v in range(1, n + 1):\n        up[k][v] = up[k - 1][up[k - 1][v]]\n\n\ndef lca(a, b):\n    if depth[a] < depth[b]:\n        a, b = b, a\n    diff = depth[a] - depth[b]\n    for k in range(LOG):                 # 1) 깊이 맞추기\n        if diff >> k & 1:\n            a = up[k][a]\n    if a == b:\n        return a\n    for k in range(LOG - 1, -1, -1):     # 2) 조상이 달라지는 동안 함께 올리기\n        if up[k][a] != up[k][b]:\n            a, b = up[k][a], up[k][b]\n    return up[0][a]\n\n\nfor _ in range(int(input())):\n    a, b = map(int, input().split())\n    c = lca(a, b)\n    print(c, dist[a] + dist[b] - 2 * dist[c])\n",
+        "stdin": "7\n1 2 3\n1 3 1\n2 4 2\n2 5 5\n3 6 4\n6 7 2\n4\n4 5\n4 7\n6 7\n1 1\n",
+        "output": "2 7\n1 12\n6 2\n1 0\n"
+      },
+      {
+        "title": "진입·탈출 시각으로 조상 판별",
+        "code": "# 진입·탈출 시각으로 '조상인가' 를 O(1) 에 확인하기\nchildren = {1: [2, 3], 2: [4, 5], 3: [6], 4: [], 5: [], 6: []}\ntin, tout = {}, {}\ntimer = 0\nstack = [(1, False)]\nwhile stack:                             # 반복 DFS: 들어갈 때와 나올 때 시각을 적어요\n    v, leaving = stack.pop()\n    timer += 1\n    if leaving:\n        tout[v] = timer\n        continue\n    tin[v] = timer\n    stack.append((v, True))\n    for c in reversed(children[v]):\n        stack.append((c, False))\n\n\ndef is_ancestor(a, b):                   # a 가 b 의 조상(자기 자신 포함)인가\n    return tin[a] <= tin[b] and tout[b] <= tout[a]\n\n\nprint(tin)\nprint(tout)\nprint(is_ancestor(1, 5), is_ancestor(2, 5), is_ancestor(3, 5), is_ancestor(5, 5))\n",
+        "output": "{1: 1, 2: 2, 4: 3, 5: 5, 3: 8, 6: 9}\n{4: 4, 5: 6, 2: 7, 6: 10, 3: 11, 1: 12}\nTrue True False True\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "def dfs(v):\n    for c in children[v]:\n        depth[c] = depth[v] + 1\n        dfs(c)",
+        "right": "BFS 나 리스트 스택으로 반복해서 내려가기",
+        "why": "Python 기본 재귀 한도는 1000 이라 정점 5000개짜리 일직선 트리만 돼도 RecursionError 가 나요. 정점이 10^5 개인 트리에서는 반복문으로 부모와 깊이를 구해요."
+      },
+      {
+        "wrong": "for v in range(1, n + 1):\n    for k in range(1, LOG):\n        up[k][v] = up[k - 1][up[k - 1][v]]",
+        "right": "for k in range(1, LOG):\n    for v in range(1, n + 1):\n        up[k][v] = up[k - 1][up[k - 1][v]]",
+        "why": "v 를 바깥에 두면 부모 번호가 더 큰 정점의 윗단계 값이 아직 0 이에요. 1→2→3→4→5 (루트 5) 트리에서 1 의 4번째 조상이 5 가 아니라 0 으로 나와요."
+      },
+      {
+        "wrong": "for k in range(LOG - 1, -1, -1):  # 깊이를 맞추지 않고 바로\n    if up[k][a] != up[k][b]: ...",
+        "right": "먼저 깊은 쪽을 깊이 차이만큼 올리고, a == b 인지 확인한 뒤 함께 올리기",
+        "why": "깊이가 다르면 같은 횟수만큼 올려도 같은 정점에서 만나지 않아요. 한쪽이 다른 쪽의 조상인 경우도 깊이를 맞춘 직후에 걸러야 해요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "부모·깊이 구하기(BFS)",
+        "signature": "up[0][to] = v; dep[to] = dep[v] + 1; dist[to] = dist[v] + w;",
+        "does": "루트에서 BFS 로 내려가며 각 정점의 부모, 깊이, 루트로부터의 거리를 채워요.",
+        "when": "LCA 표를 만들기 전에 한 번 해요.",
+        "complexity": "O(N)"
+      },
+      {
+        "name": "2^k 조상 표",
+        "signature": "for (int k = 1; k < LOG; k++)\n    for (int v = 1; v <= n; v++) up[k][v] = up[k - 1][up[k - 1][v]];",
+        "does": "2^k 칸 위 조상은 2^(k-1) 칸 위로 두 번 올라간 곳이에요. 루트의 조상은 자기 자신으로 채워 둬요.",
+        "when": "LOG 는 (1 << LOG) > n 이 되게 잡아요.",
+        "complexity": "O(N log N)"
+      },
+      {
+        "name": "lca(a, b)",
+        "signature": "int lca(int a, int b);  // 깊이 맞추기 → 함께 올리기",
+        "does": "더 깊은 쪽을 깊이 차이만큼 올린 뒤, 두 정점의 2^k 조상이 다를 때만 함께 올려요. 마지막에 한 칸 위가 답이에요.",
+        "when": "두 정점이 갈라지는 지점이 필요할 때 써요.",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "두 정점 거리",
+        "signature": "dist[a] + dist[b] - 2 * dist[lca(a, b)]",
+        "does": "루트까지 거리 둘을 더하고 LCA 까지 거리를 두 번 빼요. dist 는 long long 으로 둬요.",
+        "when": "가중치 트리의 경로 길이를 구할 때 써요.",
+        "complexity": "O(log N)"
+      },
+      {
+        "name": "진입·탈출 시각",
+        "signature": "tin[a] <= tin[b] && tout[b] <= tout[a]",
+        "does": "DFS 에서 들어간 시각과 나온 시각으로 a 가 b 의 조상(자기 자신 포함)인지 O(1)에 알 수 있어요.",
+        "when": "조상 판별, 서브트리 판별, 경로 위 판별에 써요.",
+        "complexity": "전처리 O(N), 판별 O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "2^k 조상 표로 LCA 와 두 정점 거리",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint n, LOG;\nvector<vector<int>> up;                  // up[k][v] = v 의 2^k 번째 조상\nvector<int> dep;\nvector<long long> dist;                  // 거리 합은 int 를 넘을 수 있어요\n\nint lca(int a, int b) {\n    if (dep[a] < dep[b]) swap(a, b);\n    int diff = dep[a] - dep[b];\n    for (int k = 0; k < LOG; k++)        // 1) 깊이 맞추기\n        if (diff >> k & 1) a = up[k][a];\n    if (a == b) return a;\n    for (int k = LOG - 1; k >= 0; k--)   // 2) 조상이 달라지는 동안 함께 올리기\n        if (up[k][a] != up[k][b]) a = up[k][a], b = up[k][b];\n    return up[0][a];\n}\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n    cin >> n;\n    vector<vector<pair<int, int>>> g(n + 1);\n    for (int i = 0; i < n - 1; i++) {\n        int a, b, w;\n        cin >> a >> b >> w;\n        g[a].push_back({b, w});\n        g[b].push_back({a, w});\n    }\n    LOG = 1;\n    while ((1 << LOG) <= n) LOG++;       // 2^LOG > n\n    up.assign(LOG, vector<int>(n + 1, 1)); // 루트(1)의 조상은 자기 자신\n    dep.assign(n + 1, 0);\n    dist.assign(n + 1, 0);\n    vector<bool> seen(n + 1, false);\n    queue<int> q;\n    q.push(1);\n    seen[1] = true;\n    while (!q.empty()) {                 // BFS 로 부모·깊이·거리\n        int v = q.front();\n        q.pop();\n        for (auto [to, w] : g[v]) {\n            if (seen[to]) continue;\n            seen[to] = true;\n            up[0][to] = v;\n            dep[to] = dep[v] + 1;\n            dist[to] = dist[v] + w;\n            q.push(to);\n        }\n    }\n    for (int k = 1; k < LOG; k++)        // k 를 바깥 반복으로\n        for (int v = 1; v <= n; v++) up[k][v] = up[k - 1][up[k - 1][v]];\n\n    int Q;\n    cin >> Q;\n    while (Q--) {\n        int a, b;\n        cin >> a >> b;\n        int c = lca(a, b);\n        cout << c << ' ' << dist[a] + dist[b] - 2 * dist[c] << '\\n';\n    }\n    return 0;\n}\n",
+        "stdin": "7\n1 2 3\n1 3 1\n2 4 2\n2 5 5\n3 6 4\n6 7 2\n4\n4 5\n4 7\n6 7\n1 1\n",
+        "output": "2 7\n1 12\n6 2\n1 0\n"
+      },
+      {
+        "title": "진입·탈출 시각으로 조상 판별",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\n// 진입·탈출 시각으로 '조상인가' 를 O(1) 에 확인하기\nint main() {\n    vector<vector<int>> children = {{}, {2, 3}, {4, 5}, {6}, {}, {}, {}};\n    int n = 6, timer = 0;\n    vector<int> tin(n + 1), tout(n + 1);\n    vector<pair<int, bool>> st = {{1, false}};\n    while (!st.empty()) {                // 반복 DFS: 들어갈 때와 나올 때 시각을 적어요\n        auto [v, leaving] = st.back();\n        st.pop_back();\n        timer++;\n        if (leaving) { tout[v] = timer; continue; }\n        tin[v] = timer;\n        st.push_back({v, true});\n        for (int i = (int)children[v].size() - 1; i >= 0; i--) st.push_back({children[v][i], false});\n    }\n    auto is_ancestor = [&](int a, int b) { return tin[a] <= tin[b] && tout[b] <= tout[a]; };\n    for (int v = 1; v <= n; v++) cout << v << ':' << tin[v] << '-' << tout[v] << (v < n ? ' ' : '\\n');\n    cout << boolalpha << is_ancestor(1, 5) << ' ' << is_ancestor(2, 5) << ' '\n         << is_ancestor(3, 5) << ' ' << is_ancestor(5, 5) << '\\n';\n    return 0;\n}\n",
+        "output": "1:1-12 2:2-7 3:8-11 4:3-4 5:5-6 6:9-10\ntrue true false true\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "const int LOG = 16;  // N = 100000",
+        "right": "int LOG = 1; while ((1 << LOG) <= n) LOG++;  // N = 100000 이면 17",
+        "why": "LOG = 16 이면 한 번에 올릴 수 있는 칸 수가 최대 65535 라, 깊이 차이 99999 를 맞추지 못해요(실제로 34463 칸만 올라가요)."
+      },
+      {
+        "wrong": "vector<int> dist(n + 1);  // 간선 길이 최대 1e9",
+        "right": "vector<long long> dist(n + 1);",
+        "why": "루트에서의 거리는 간선 길이의 합이라 int(약 2.1e9)를 쉽게 넘어요. 길이 1e9 간선 세 개만 이어져도 3000000000 이에요."
+      },
+      {
+        "wrong": "if (up[k][a] != up[k][b]) ...  // 깊이를 맞추지 않고 바로",
+        "right": "깊은 쪽을 깊이 차이만큼 올리고 a == b 인지 확인한 뒤 함께 올리기",
+        "why": "깊이가 다르면 같은 횟수만큼 올려도 같은 정점에서 만나지 않아요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "질의가 몇 개 없고 트리가 작을 때",
+      "use": "부모를 따라 한 칸씩 올라가는 단순한 방법"
+    },
+    {
+      "situation": "두 정점의 LCA·거리를 많이 물을 때",
+      "use": "2^k 조상 표(binary lifting)"
+    },
+    {
+      "situation": "한 정점이 다른 정점의 조상인지(서브트리 안인지)만 물을 때",
+      "use": "진입·탈출 시각"
+    },
+    {
+      "situation": "w 가 u–v 경로 위에 있는지 물을 때",
+      "use": "거리 합 비교 dist(u,w) + dist(w,v) == dist(u,v), 또는 LCA 와 조상 판별"
+    }
+  ],
+  "checklist": [
+    "루트를 정하고 루트의 부모를 자기 자신(또는 정해진 값)으로 채웠나요?",
+    "2^LOG 가 N 보다 크게 LOG 를 잡았나요?",
+    "조상 표를 k 바깥 반복으로 채웠나요?",
+    "재귀 대신 반복문으로 트리를 훑었나요? (일직선 트리)",
+    "거리 합을 long long 으로 뒀나요?",
+    "u 와 v 가 같은 질의, 한쪽이 다른 쪽의 조상인 질의를 확인했나요?"
+  ]
+}

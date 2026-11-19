@@ -8,10 +8,12 @@
     "원소 바꾸기와 구간 합 묻기가 섞여서 많이 들어올 때",
     "값이 바뀌는 배열에서 구간 최솟값·최댓값을 물을 때",
     "앞에 나온 수 중 나보다 큰(작은) 수의 개수를 셀 때(역순쌍, 좌표 압축과 함께)",
-    "구간에 같은 값을 더하고 한 점의 값을 물을 때(차분 배열을 펜윅에 담기)"
+    "구간에 같은 값을 더하고 한 점의 값을 물을 때(차분 배열을 펜윅에 담기)",
+    "구간 전체에 값을 더하면서 구간 합·최댓값도 물을 때(지연 전파)"
   ],
   "topics": [
-    "펜윅"
+    "펜윅",
+    "세그먼트"
   ],
   "python": {
     "items": [
@@ -56,6 +58,13 @@
         "does": "l, r 을 잎에서 위로 올리며 구간에 걸치는 노드만 모아요. 반열린 구간 [l, r) 이에요.",
         "when": "구간 최솟값·최댓값 등을 물을 때 써요. 닫힌 구간 [l, r] 은 query(l, r + 1) 로 불러요.",
         "complexity": "O(log N)"
+      },
+      {
+        "name": "지연 전파(lazy) 세그먼트 트리",
+        "signature": "lazy = [0] * (4 * n)\ndef push(node, s, e): ...  # 자식을 보기 직전에 내려 주기",
+        "does": "구간 전체를 덮는 노드에는 값만 반영하고 '자식에게 내려 줄 값'을 쌓아 둬요. 그 노드의 자식을 볼 일이 생길 때 내려 줘요.",
+        "when": "구간에 더하기와 구간 합(최댓값 등)을 함께 물을 때 써요.",
+        "complexity": "질의·갱신 O(log N)"
       }
     ],
     "examples": [
@@ -74,6 +83,11 @@
         "title": "펜윅 + 좌표 압축: 역순쌍 개수",
         "code": "a = [30, 10, 50, 10, 20]\n# 좌표 압축: 값을 1..k 순위로 바꾸기\nrank = {v: i + 1 for i, v in enumerate(sorted(set(a)))}\nk = len(rank)\ntree = [0] * (k + 1)\n\n\ndef add(i):\n    while i <= k:\n        tree[i] += 1\n        i += i & -i\n\n\ndef prefix(i):\n    s = 0\n    while i > 0:\n        s += tree[i]\n        i -= i & -i\n    return s\n\n\ninv = 0\nseen = 0\nfor v in a:\n    r = rank[v]\n    inv += seen - prefix(r)              # 앞에 나온 수 중 v 보다 큰 것의 개수\n    add(r)\n    seen += 1\nprint(inv)\n",
         "output": "5\n"
+      },
+      {
+        "title": "지연 전파 세그먼트 트리: 구간에 더하기와 구간 합",
+        "code": "# 지연 전파(lazy) 세그먼트 트리: 구간에 더하기 + 구간 합\nn = 8\na = [5, 3, 7, 9, 6, 4, 1, 2]\ntree = [0] * (4 * n)\nlazy = [0] * (4 * n)                     # 아직 자식에게 내려 주지 않은 '더할 값'\n\n\ndef build(node, s, e):\n    if s == e:\n        tree[node] = a[s]\n        return\n    m = (s + e) // 2\n    build(2 * node, s, m)\n    build(2 * node + 1, m + 1, e)\n    tree[node] = tree[2 * node] + tree[2 * node + 1]\n\n\ndef push(node, s, e):                    # 자식을 보기 직전에 내려 줘요\n    if lazy[node]:\n        m = (s + e) // 2\n        for child, length in ((2 * node, m - s + 1), (2 * node + 1, e - m)):\n            tree[child] += lazy[node] * length\n            lazy[child] += lazy[node]\n        lazy[node] = 0\n\n\ndef add(node, s, e, l, r, x):            # a[l..r] += x (닫힌 구간, 0-based)\n    if r < s or e < l:\n        return\n    if l <= s and e <= r:\n        tree[node] += x * (e - s + 1)    # 합은 구간 길이만큼 늘어요\n        lazy[node] += x\n        return\n    push(node, s, e)\n    m = (s + e) // 2\n    add(2 * node, s, m, l, r, x)\n    add(2 * node + 1, m + 1, e, l, r, x)\n    tree[node] = tree[2 * node] + tree[2 * node + 1]\n\n\ndef query(node, s, e, l, r):             # a[l..r] 의 합\n    if r < s or e < l:\n        return 0\n    if l <= s and e <= r:\n        return tree[node]\n    push(node, s, e)\n    m = (s + e) // 2\n    return query(2 * node, s, m, l, r) + query(2 * node + 1, m + 1, e, l, r)\n\n\nbuild(1, 0, n - 1)\nprint(query(1, 0, n - 1, 0, 7), query(1, 0, n - 1, 2, 4))\nadd(1, 0, n - 1, 1, 5, 10)               # a[1..5] 에 10 더하기\nprint(query(1, 0, n - 1, 0, 7), query(1, 0, n - 1, 2, 4), query(1, 0, n - 1, 6, 7))\nadd(1, 0, n - 1, 3, 7, -2)\nprint([query(1, 0, n - 1, i, i) for i in range(n)])\n",
+        "output": "37 22\n87 52 3\n[5, 13, 17, 17, 14, 12, -1, 0]\n"
       }
     ],
     "pitfalls": [
@@ -96,6 +110,11 @@
         "wrong": "print(prefix(r) - prefix(l))",
         "right": "print(prefix(r) - prefix(l - 1))",
         "why": "prefix(l) 을 빼면 a[l] 까지 빠져서 구간이 l+1..r 이 돼요."
+      },
+      {
+        "wrong": "m = (s + e) // 2\nreturn query(2 * node, s, m, l, r) + query(2 * node + 1, m + 1, e, l, r)  # push 없이",
+        "right": "push(node, s, e)\nm = (s + e) // 2\nreturn query(2 * node, s, m, l, r) + query(2 * node + 1, m + 1, e, l, r)",
+        "why": "쌓아 둔 더할 값을 내려 주지 않고 자식으로 내려가면 그 값이 빠진 옛 합을 읽어요. 위 예제에서 push 를 빼면 a[2..4] 의 합이 52 가 아니라 42 로 나와요."
       }
     ]
   },
@@ -149,6 +168,13 @@
         "does": "노드 1이 루트, 자식이 2i, 2i+1 인 재귀 구조예요. 구간 갱신(lazy)으로 늘리기 쉬워요.",
         "when": "구간에 더하기와 구간 합을 함께 해야 할 때처럼 확장이 필요하면 써요.",
         "complexity": "질의·갱신 O(log N)"
+      },
+      {
+        "name": "지연 전파(lazy)",
+        "signature": "vector<long long> tree(4 * n), lz(4 * n);\nvoid push(int node, int s, int e);  // 자식을 보기 직전에 내려 주기",
+        "does": "구간 전체를 덮는 노드에는 값만 반영하고 '자식에게 내려 줄 값'을 쌓아 둬요. 그 노드의 자식을 볼 일이 생길 때 내려 줘요.",
+        "when": "구간에 더하기와 구간 합(최댓값 등)을 함께 물을 때 써요.",
+        "complexity": "질의·갱신 O(log N)"
       }
     ],
     "examples": [
@@ -167,6 +193,11 @@
         "title": "펜윅 + 좌표 압축: 역순쌍 개수",
         "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint k;\nvector<int> tree;\n\nvoid add(int i) {\n    for (; i <= k; i += i & -i) tree[i]++;\n}\n\nint prefix(int i) {\n    int s = 0;\n    for (; i > 0; i -= i & -i) s += tree[i];\n    return s;\n}\n\nint main() {\n    vector<int> a = {30, 10, 50, 10, 20};\n    // 좌표 압축: 값을 1..k 순위로 바꾸기\n    vector<int> vals = a;\n    sort(vals.begin(), vals.end());\n    vals.erase(unique(vals.begin(), vals.end()), vals.end());\n    k = vals.size();\n    tree.assign(k + 1, 0);\n\n    long long inv = 0;                   // 역순쌍은 최대 N(N-1)/2 개라 long long\n    for (int i = 0; i < (int)a.size(); i++) {\n        int r = lower_bound(vals.begin(), vals.end(), a[i]) - vals.begin() + 1;\n        inv += i - prefix(r);            // 앞에 나온 수 중 a[i] 보다 큰 것의 개수\n        add(r);\n    }\n    cout << inv << '\\n';\n    return 0;\n}\n",
         "output": "5\n"
+      },
+      {
+        "title": "지연 전파 세그먼트 트리: 구간에 더하기와 구간 합",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\n// 지연 전파(lazy) 세그먼트 트리: 구간에 더하기 + 구간 합\nint n;\nvector<long long> tree, lz;              // lz: 아직 자식에게 내려 주지 않은 '더할 값'\nvector<long long> a;\n\nvoid build(int node, int s, int e) {\n    if (s == e) { tree[node] = a[s]; return; }\n    int m = (s + e) / 2;\n    build(2 * node, s, m);\n    build(2 * node + 1, m + 1, e);\n    tree[node] = tree[2 * node] + tree[2 * node + 1];\n}\n\nvoid push(int node, int s, int e) {      // 자식을 보기 직전에 내려 줘요\n    if (lz[node] == 0) return;\n    int m = (s + e) / 2;\n    tree[2 * node] += lz[node] * (m - s + 1);\n    tree[2 * node + 1] += lz[node] * (e - m);\n    lz[2 * node] += lz[node];\n    lz[2 * node + 1] += lz[node];\n    lz[node] = 0;\n}\n\nvoid add(int node, int s, int e, int l, int r, long long x) {  // a[l..r] += x\n    if (r < s || e < l) return;\n    if (l <= s && e <= r) {\n        tree[node] += x * (e - s + 1);   // 합은 구간 길이만큼 늘어요\n        lz[node] += x;\n        return;\n    }\n    push(node, s, e);\n    int m = (s + e) / 2;\n    add(2 * node, s, m, l, r, x);\n    add(2 * node + 1, m + 1, e, l, r, x);\n    tree[node] = tree[2 * node] + tree[2 * node + 1];\n}\n\nlong long query(int node, int s, int e, int l, int r) {         // a[l..r] 의 합\n    if (r < s || e < l) return 0;\n    if (l <= s && e <= r) return tree[node];\n    push(node, s, e);\n    int m = (s + e) / 2;\n    return query(2 * node, s, m, l, r) + query(2 * node + 1, m + 1, e, l, r);\n}\n\nint main() {\n    a = {5, 3, 7, 9, 6, 4, 1, 2};\n    n = a.size();\n    tree.assign(4 * n, 0);\n    lz.assign(4 * n, 0);\n    build(1, 0, n - 1);\n    cout << query(1, 0, n - 1, 0, 7) << ' ' << query(1, 0, n - 1, 2, 4) << '\\n';\n    add(1, 0, n - 1, 1, 5, 10);          // a[1..5] 에 10 더하기\n    cout << query(1, 0, n - 1, 0, 7) << ' ' << query(1, 0, n - 1, 2, 4) << ' '\n         << query(1, 0, n - 1, 6, 7) << '\\n';\n    add(1, 0, n - 1, 3, 7, -2);\n    for (int i = 0; i < n; i++) cout << query(1, 0, n - 1, i, i) << (i + 1 < n ? ' ' : '\\n');\n    return 0;\n}\n",
+        "output": "37 22\n87 52 3\n5 13 17 17 14 12 -1 0\n"
       }
     ],
     "pitfalls": [
@@ -189,6 +220,11 @@
         "wrong": "add(x, y);  // a[x] 를 y 로 바꾸려고",
         "right": "add(x, y - a[x]);\na[x] = y;",
         "why": "펜윅은 더하는 구조라 변화량을 넘겨야 해요."
+      },
+      {
+        "wrong": "tree[2 * node] += lz[node];  // 자식 합에 값 하나만",
+        "right": "tree[2 * node] += lz[node] * (m - s + 1);",
+        "why": "합을 담는 트리에서는 구간 안의 원소 수만큼 늘어나야 해요. 최댓값·최솟값을 담는 트리라면 길이를 곱하지 않고 값만 더해요."
       }
     ]
   },
@@ -220,6 +256,7 @@
     "구간 끝이 닫힌 구간인지 반열린 구간인지 맞췄나요?",
     "합이 int 범위를 넘으면 long long 으로 뒀나요?",
     "값의 범위가 크면 좌표 압축을 먼저 했나요?",
-    "질의 수 × log N 이 시간 안에 드는지 확인했나요? Python 은 빠른 입력(sys.stdin)을 쓰세요."
+    "질의 수 × log N 이 시간 안에 드는지 확인했나요? Python 은 빠른 입력(sys.stdin)을 쓰세요.",
+    "지연 전파를 쓸 때 자식으로 내려가기 전(갱신·질의 모두)에 push 를 불렀나요?"
   ]
 }
