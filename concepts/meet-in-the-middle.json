@@ -1,0 +1,160 @@
+{
+  "slug": "meet-in-the-middle",
+  "title": "중간에서 만나기(반씩 나눠 완전탐색)",
+  "category": "탐색",
+  "order": 4,
+  "summary": "원소를 반으로 나눠 각각의 부분집합 합을 모두 구한 뒤, 정렬·이분 탐색이나 투 포인터로 짝을 맞춰 2^N 을 2^(N/2) 로 줄여요.",
+  "when": [
+    "N 이 30~40 이라 2^N 은 너무 많지만 2^(N/2) 는 백만 정도일 때",
+    "부분집합의 합이 S 이하(또는 정확히 S)인 경우를 세거나 가장 가까운 합을 찾을 때",
+    "값이 너무 커서 배낭 DP 처럼 합을 인덱스로 쓸 수 없을 때",
+    "두 그룹에서 하나씩 골라 조건을 맞추는 문제로 바꿀 수 있을 때"
+  ],
+  "topics": [
+    "중간에서 만나기"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "부분집합 합 열거",
+        "signature": "sums = [0]\nfor x in items:\n    sums += [s + x for s in sums]",
+        "does": "원소 하나를 볼 때마다 지금까지의 합 목록을 두 배로 늘려요. 빈 부분집합의 합 0 도 들어 있어요.",
+        "when": "반쪽(약 20개)의 모든 부분집합 합을 구할 때 써요. 비트마스크 이중 반복보다 훨씬 빨라요.",
+        "complexity": "O(2^M), M = 반쪽 원소 수"
+      },
+      {
+        "name": "sorted + bisect_right",
+        "signature": "right.sort()\nbisect_right(right, S - s)",
+        "does": "정렬된 오른쪽 합에서 S - s 이하인 개수를 구해요.",
+        "when": "왼쪽 합 s 마다 '짝이 될 수 있는 오른쪽 합의 개수'를 셀 때 써요.",
+        "complexity": "정렬 O(2^M · M), 질문마다 O(M)"
+      },
+      {
+        "name": "Counter",
+        "signature": "cnt = Counter(right); cnt[S - s]",
+        "does": "오른쪽 합별 개수를 세어 두고 정확히 S - s 인 개수를 바로 꺼내요.",
+        "when": "합이 정확히 S 인 경우를 셀 때 써요.",
+        "complexity": "평균 O(2^M)"
+      },
+      {
+        "name": "투 포인터 합치기",
+        "signature": "left 오름차순, right 내림차순 인덱스 j 를 줄여 가며",
+        "does": "왼쪽 합이 커질수록 짝이 될 오른쪽 경계는 작아지기만 하니 j 를 한 방향으로만 움직여요.",
+        "when": "S 이하 개수나 S 이하 최대 합을 이분 탐색 없이 구할 때 써요.",
+        "complexity": "O(2^M)(정렬 제외)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "반씩 나눠 S 이하·정확히 S 인 부분집합 세기",
+        "code": "import sys\nfrom bisect import bisect_right\nfrom collections import Counter\n\n\ndef subset_sums(items):\n    sums = [0]                                # 빈 부분집합(합 0)부터\n    for x in items:\n        sums += [s + x for s in sums]         # 지금까지의 합에 x 를 더한 것들을 덧붙여요\n    return sums\n\n\ndata = sys.stdin.read().split()\nn, S = int(data[0]), int(data[1])\na = list(map(int, data[2:2 + n]))\nleft = subset_sums(a[:n // 2])\nright = sorted(subset_sums(a[n // 2:]))\nprint('반쪽 크기', len(left), len(right))\n\n# 1) 합이 S 이하인 부분집합 수: 왼쪽 합마다 오른쪽에서 S - s 이하 개수\nprint('S 이하', sum(bisect_right(right, S - s) for s in left))\n\n# 2) 합이 정확히 S 인 부분집합 수: 오른쪽 합의 개수표\ncnt = Counter(right)\nprint('정확히 S', sum(cnt[S - s] for s in left))\n\n# 3) 빈 부분집합을 빼야 하면 S >= 0 일 때 1 을 빼요\nprint('공집합 제외 S 이하', sum(bisect_right(right, S - s) for s in left) - (1 if S >= 0 else 0))\n",
+        "stdin": "6 10\n3 5 -2 7 4 1\n",
+        "output": "반쪽 크기 8 8\nS 이하 39\n정확히 S 5\n공집합 제외 S 이하 38\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "right = subset_sums(a[n // 2:])\nbisect_right(right, S - s)",
+        "right": "right = sorted(subset_sums(a[n // 2:]))\nbisect_right(right, S - s)",
+        "why": "bisect 는 정렬된 리스트에서만 맞아요. 예제 입력에서 정렬을 빼면 39 대신 53 이 나와요."
+      },
+      {
+        "wrong": "answer = count_le - 2  # 양쪽 반에 빈 부분집합이 하나씩 있으니",
+        "right": "answer = count_le - 1  # 둘 다 비운 조합 하나만 빼요",
+        "why": "왼쪽 빈 집합 + 오른쪽 빈 집합 조합은 전체에서 딱 한 번 세어져요. 한쪽만 빈 경우는 공집합이 아니니 빼면 안 돼요. 예제에서 38 이 맞고 37 은 틀려요."
+      },
+      {
+        "wrong": "for mask in range(1 << n):  # n = 40 전체를 바로 열거",
+        "right": "left = subset_sums(a[:n // 2])\nright = sorted(subset_sums(a[n // 2:]))",
+        "why": "2^40 은 약 1조라 끝나지 않아요. 반씩 나누면 각 2^20 ≈ 백만이라 1초 안팎이에요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "비트마스크 부분집합 합",
+        "signature": "s[mask] = s[mask & (mask - 1)] + v[__builtin_ctz(mask)];",
+        "does": "가장 낮은 켜진 비트 하나를 뺀 부분집합의 합에 그 원소를 더해 모든 부분집합 합을 채워요.",
+        "when": "반쪽(약 20개)의 2^M 개 합을 구할 때 써요.",
+        "complexity": "O(2^M)"
+      },
+      {
+        "name": "sort + upper_bound",
+        "signature": "upper_bound(R.begin(), R.end(), S - s) - R.begin()",
+        "does": "정렬된 R 에서 S - s 이하인 원소 개수를 구해요.",
+        "when": "S 이하인 조합 수를 셀 때 써요.",
+        "complexity": "정렬 O(2^M · M), 질문마다 O(M)"
+      },
+      {
+        "name": "equal_range",
+        "signature": "auto [lo, hi] = equal_range(R.begin(), R.end(), x);",
+        "does": "정렬된 R 에서 x 와 같은 원소 구간을 돌려줘요. hi - lo 가 개수예요.",
+        "when": "합이 정확히 S 인 조합 수를 셀 때 써요.",
+        "complexity": "O(M)"
+      },
+      {
+        "name": "투 포인터 합치기",
+        "signature": "while (j >= 0 && s + R[j] > S) j--;",
+        "does": "L 을 오름차순으로 보며 R 의 끝 인덱스를 줄이기만 해요.",
+        "when": "S 이하 최대 합처럼 경계 하나만 필요할 때 써요.",
+        "complexity": "O(2^M)(정렬 제외)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "반씩 나눠 세기와 투 포인터로 S 이하 최대 합",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\ntypedef long long ll;\n\nvector<ll> subsetSums(const vector<ll> &v) {\n    int m = v.size();\n    vector<ll> s(1 << m, 0);                  // s[mask] = mask 에 든 원소들의 합\n    for (int mask = 1; mask < (1 << m); mask++) {\n        int low = __builtin_ctz(mask);        // 가장 낮은 켜진 비트\n        s[mask] = s[mask & (mask - 1)] + v[low];\n    }\n    return s;\n}\n\nint main() {\n    int n;\n    ll S;\n    cin >> n >> S;\n    vector<ll> a(n);\n    for (auto &x : a) cin >> x;\n    vector<ll> L = subsetSums(vector<ll>(a.begin(), a.begin() + n / 2));\n    vector<ll> R = subsetSums(vector<ll>(a.begin() + n / 2, a.end()));\n    sort(R.begin(), R.end());\n    cout << \"반쪽 크기 \" << L.size() << ' ' << R.size() << '\\n';\n\n    ll le = 0, eq = 0;                        // 개수는 2^N 까지 커지니 long long\n    for (ll s : L) {\n        le += upper_bound(R.begin(), R.end(), S - s) - R.begin();\n        auto [lo, hi] = equal_range(R.begin(), R.end(), S - s);\n        eq += hi - lo;\n    }\n    cout << \"S 이하 \" << le << '\\n';\n    cout << \"정확히 S \" << eq << '\\n';\n    cout << \"공집합 제외 S 이하 \" << le - (S >= 0 ? 1 : 0) << '\\n';\n\n    // 투 포인터: L 오름차순, R 내림차순으로 보며 S 이하인 가장 큰 합\n    sort(L.begin(), L.end());\n    ll best = LLONG_MIN;\n    int j = (int)R.size() - 1;\n    for (ll s : L) {\n        while (j >= 0 && s + R[j] > S) j--;\n        if (j < 0) break;\n        best = max(best, s + R[j]);\n    }\n    cout << \"S 이하 최대 합 \" << best << '\\n';\n    return 0;\n}\n",
+        "stdin": "6 10\n3 5 -2 7 4 1\n",
+        "output": "반쪽 크기 8 8\nS 이하 39\n정확히 S 5\n공집합 제외 S 이하 38\nS 이하 최대 합 10\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "long long total = 1 << n;  // n = 40",
+        "right": "long long total = 1LL << n;",
+        "why": "1 은 int 라서 int 범위에서 밀고 나서 long long 에 담겨요. n = 40 에서 1099511627776 대신 256 이 나왔어요(정의되지 않은 동작)."
+      },
+      {
+        "wrong": "int cnt = 0;\ncnt += upper_bound(R.begin(), R.end(), S - s) - R.begin();",
+        "right": "long long cnt = 0;\ncnt += upper_bound(R.begin(), R.end(), S - s) - R.begin();",
+        "why": "조합 수는 최대 2^N 이라 N = 40 이면 약 1.1 × 10^12 예요. int 로 세면 넘쳐요."
+      },
+      {
+        "wrong": "vector<long long> R = subsetSums(right);\nupper_bound(R.begin(), R.end(), S - s);",
+        "right": "vector<long long> R = subsetSums(right);\nsort(R.begin(), R.end());\nupper_bound(R.begin(), R.end(), S - s);",
+        "why": "비트마스크 순서로 만든 합은 정렬되어 있지 않아요. upper_bound 는 정렬된 범위에서만 뜻이 있어요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "N ≤ 20",
+      "use": "그냥 비트마스크로 2^N 완전탐색"
+    },
+    {
+      "situation": "N 이 30~40, 합 조건으로 부분집합을 셈",
+      "use": "중간에서 만나기(반씩 나눠 합 열거 + 정렬)"
+    },
+    {
+      "situation": "합의 범위가 작음(약 10^6 이하)",
+      "use": "배낭 DP 가 더 간단해요"
+    },
+    {
+      "situation": "합이 정확히 S 인 개수",
+      "use": "한쪽을 Counter / equal_range"
+    },
+    {
+      "situation": "합이 S 이하인 개수나 최대 합",
+      "use": "한쪽 정렬 + bisect_right / upper_bound 또는 투 포인터"
+    }
+  ],
+  "checklist": [
+    "반쪽 크기가 2^20(약 백만) 정도인가요? 메모리도 괜찮나요?",
+    "빈 부분집합을 넣었나요? 공집합을 빼야 하면 1 만 뺐나요?",
+    "짝을 찾는 쪽 목록을 정렬했나요?",
+    "개수와 합을 long long(Python 은 그대로)으로 셌나요?",
+    "음수 원소가 있으면 투 포인터 방향이 여전히 맞는지 확인했나요?",
+    "작은 입력에서 전체 완전탐색 결과와 같은지 확인했나요?"
+  ]
+}

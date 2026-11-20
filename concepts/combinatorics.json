@@ -1,0 +1,188 @@
+{
+  "slug": "combinatorics",
+  "title": "조합론과 이항 계수(nCr mod p)",
+  "category": "수학",
+  "order": 2,
+  "summary": "팩토리얼과 역팩토리얼을 미리 만들어 nCr 을 O(1)에 구하고, 경로 수·중복조합 같은 경우의 수를 식 하나로 세요.",
+  "when": [
+    "경우의 수를 1,000,000,007 로 나눈 나머지로 출력하라고 할 때",
+    "격자에서 오른쪽·아래로만 가는 경로 수처럼 '몇 개 중 몇 개를 고르는' 꼴로 바뀔 때",
+    "n 이 10^5 이상이라 칸마다 DP 를 돌릴 수 없지만 식으로는 셀 수 있을 때",
+    "같은 물건 n 개를 k 명에게 나누는 방법(중복조합)을 셀 때",
+    "nCr 질문이 아주 많이 들어올 때"
+  ],
+  "topics": [
+    "조합론",
+    "이항 계수"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "math.comb / math.perm",
+        "signature": "math.comb(n, r), math.perm(n, r)  # 3.8+",
+        "does": "정확한 nCr, nPr 을 큰 정수로 구해요. r > n 이면 0 이에요.",
+        "when": "n 이 수천 이하이고 질문이 몇 개뿐일 때, 또는 정답 확인용으로 써요.",
+        "complexity": "O(r) 번의 큰 정수 곱셈(자릿수가 커질수록 느려요)"
+      },
+      {
+        "name": "팩토리얼·역팩토리얼 전처리",
+        "signature": "fact[i] = fact[i-1] * i % MOD\ninv_fact[N] = pow(fact[N], MOD - 2, MOD)\ninv_fact[i-1] = inv_fact[i] * i % MOD",
+        "does": "0..N 의 팩토리얼과 그 역원을 만들어요. 역원은 맨 끝 하나만 거듭제곱으로 구하고 거꾸로 채워요.",
+        "when": "nCr mod p 를 여러 번 물을 때 먼저 한 번 만들어 둬요(MOD 는 소수여야 해요).",
+        "complexity": "O(N + log MOD)"
+      },
+      {
+        "name": "nCr(n, r)",
+        "signature": "fact[n] * inv_fact[r] % MOD * inv_fact[n - r] % MOD",
+        "does": "전처리한 표로 이항 계수를 나머지로 구해요. r < 0 이나 r > n 은 먼저 0 으로 돌려줘요.",
+        "when": "경로 수, 고르는 방법 수를 나머지로 낼 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "파스칼 삼각형",
+        "signature": "C[n][r] = (C[n-1][r-1] + C[n-1][r]) % M",
+        "does": "덧셈만으로 이항 계수 표를 채워요. 나눗셈이 없어서 M 이 소수가 아니어도 돼요.",
+        "when": "n 이 수천 이하이거나 나머지 M 이 소수가 아닐 때 써요.",
+        "complexity": "O(N²)"
+      },
+      {
+        "name": "자주 쓰는 공식",
+        "signature": "격자 경로 C(h + w, h), 중복조합 C(n + k - 1, k - 1), 1개 이상씩 C(n - 1, k - 1)",
+        "does": "오른쪽 w 번·아래 h 번 순서 정하기, 같은 물건 n 개를 k 명에게 0개 이상(또는 1개 이상) 나누기예요.",
+        "when": "문제를 '어느 자리에 무엇을 놓을지 고르기'로 바꿀 수 있을 때 써요.",
+        "complexity": "nCr 한 번과 같아요"
+      }
+    ],
+    "examples": [
+      {
+        "title": "math.comb 와 팩토리얼 전처리로 nCr mod p",
+        "code": "import math\n\nMOD = 1_000_000_007\nprint('C(5, 2) =', math.comb(5, 2), ' P(5, 2) =', math.perm(5, 2))\nprint('C(3, 5) =', math.comb(3, 5))          # r > n 이면 0\nprint('C(60, 30) =', math.comb(60, 30))      # 큰 정수도 정확해요\n\n# 팩토리얼·역팩토리얼을 한 번 만들어 두고 C(n, r) 을 O(1) 에\nN = 200_000\nfact = [1] * (N + 1)\nfor i in range(1, N + 1):\n    fact[i] = fact[i - 1] * i % MOD\ninv_fact = [1] * (N + 1)\ninv_fact[N] = pow(fact[N], MOD - 2, MOD)     # 페르마 소정리(MOD 가 소수)\nfor i in range(N, 0, -1):\n    inv_fact[i - 1] = inv_fact[i] * i % MOD\n\n\ndef nCr(n, r):\n    if r < 0 or r > n:                       # 음수 인덱스가 조용히 뒤에서 읽히지 않게\n        return 0\n    return fact[n] * inv_fact[r] % MOD * inv_fact[n - r] % MOD\n\n\nprint('C(200000, 100000) % MOD =', nCr(200_000, 100_000))\nprint('math.comb 와 같음:', nCr(1000, 300) == math.comb(1000, 300) % MOD)\nprint('C(3, 5) =', nCr(3, 5))\n",
+        "output": "C(5, 2) = 10  P(5, 2) = 20\nC(3, 5) = 0\nC(60, 30) = 118264581564861424\nC(200000, 100000) % MOD = 879467333\nmath.comb 와 같음: True\nC(3, 5) = 0\n"
+      },
+      {
+        "title": "파스칼 삼각형, 격자 경로, 중복조합",
+        "code": "import math\n\n# 파스칼 삼각형: C[n][r] = C[n-1][r-1] + C[n-1][r]. MOD 가 소수가 아니어도 돼요\nM = 10\nC = [[0] * (M + 1) for _ in range(M + 1)]\nfor n in range(M + 1):\n    C[n][0] = 1\n    for r in range(1, n + 1):\n        C[n][r] = (C[n - 1][r - 1] + C[n - 1][r]) % 1000   # 1000 은 소수가 아님\nprint('C(10, r) % 1000 =', C[10])\n\nh, w = 3, 4                                   # 아래로 h 번, 오른쪽으로 w 번\nprint('격자 경로', math.comb(h + w, h))\nn, k = 7, 3                                   # 사탕 7개를 3명에게(0개 허용)\nprint('중복조합', math.comb(n + k - 1, k - 1))\nprint('한 명에 1개 이상', math.comb(n - 1, k - 1))\n",
+        "output": "C(10, r) % 1000 = [1, 10, 45, 120, 210, 252, 210, 120, 45, 10, 1]\n격자 경로 35\n중복조합 36\n한 명에 1개 이상 15\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "def nCr(n, r):\n    return fact[n] * inv_fact[r] % MOD * inv_fact[n - r] % MOD\n\nnCr(3, 5)",
+        "right": "def nCr(n, r):\n    if r < 0 or r > n:\n        return 0\n    return fact[n] * inv_fact[r] % MOD * inv_fact[n - r] % MOD",
+        "why": "n - r 이 음수면 inv_fact[-2] 처럼 리스트 뒤쪽을 조용히 읽어서 에러 없이 엉뚱한 값이 나와요. 범위 밖은 먼저 0 으로 돌려줘요."
+      },
+      {
+        "wrong": "f[30] // (f[15] * f[15] % MOD)  # f 는 나머지를 취한 팩토리얼",
+        "right": "f[30] * pow(f[15], MOD - 2, MOD) % MOD * pow(f[15], MOD - 2, MOD) % MOD",
+        "why": "나머지를 취한 값끼리는 나눗셈이 성립하지 않아요. 직접 나누면 0 이 나오지만 답은 155117520 이에요. 나누는 대신 역원을 곱해요."
+      },
+      {
+        "wrong": "for n, r in queries:\n    print(math.comb(n, r) % MOD)  # n 이 10^5, 질문 10^5 개",
+        "right": "# 팩토리얼·역팩토리얼을 한 번 만들고\nfor n, r in queries:\n    print(nCr(n, r))",
+        "why": "math.comb 는 매번 수만 자리 정수를 정확히 계산해서 질문이 많으면 너무 느려요. 나머지만 필요하면 전처리 표로 O(1)에 구해요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "power(b, e)",
+        "signature": "long long power(long long b, long long e)  // 직접 작성",
+        "does": "b^e mod MOD 를 반복 제곱으로 구해요. MOD 가 소수면 power(a, MOD - 2) 가 a 의 역원이에요.",
+        "when": "역팩토리얼을 만들거나 나머지 연산 안에서 나눌 때 써요.",
+        "complexity": "O(log e)"
+      },
+      {
+        "name": "팩토리얼·역팩토리얼 배열",
+        "signature": "long long fact[N + 1], inv_fact[N + 1];",
+        "does": "fact[i] = fact[i-1] * i % MOD 로 채우고, inv_fact[N] = power(fact[N], MOD - 2) 뒤 거꾸로 inv_fact[i-1] = inv_fact[i] * i % MOD 로 채워요.",
+        "when": "nCr mod p 를 여러 번 구할 때 main 처음에 한 번 만들어요.",
+        "complexity": "O(N + log MOD)"
+      },
+      {
+        "name": "nCr(n, r)",
+        "signature": "fact[n] * inv_fact[r] % MOD * inv_fact[n - r] % MOD",
+        "does": "곱할 때마다 % MOD 를 해서 long long 안에 머물게 해요. r < 0 이나 r > n 이면 0 이에요.",
+        "when": "경우의 수를 나머지로 출력할 때 써요.",
+        "complexity": "O(1)"
+      },
+      {
+        "name": "파스칼 삼각형",
+        "signature": "C[n][r] = (C[n-1][r-1] + C[n-1][r]) % M;",
+        "does": "덧셈만으로 표를 채워요. M 이 소수가 아니어도 되고 역원이 필요 없어요.",
+        "when": "n 이 수천 이하일 때 써요(메모리 N² 주의).",
+        "complexity": "O(N²)"
+      },
+      {
+        "name": "나머지 없는 정확한 nCr",
+        "signature": "res = res * (n - r + i) / i;  // i = 1..r",
+        "does": "곱한 뒤 바로 나누면 매 단계 값이 C(n - r + i, i) 라서 나누어떨어져요.",
+        "when": "답이 long long 안에 들어오는 작은 n(약 60 이하)에서 정확한 값이 필요할 때 써요.",
+        "complexity": "O(r)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "팩토리얼 전처리로 nCr mod p 와 음수 나머지 보정",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nconst long long MOD = 1'000'000'007;\nconst int N = 200'000;\nlong long fact[N + 1], inv_fact[N + 1];\n\nlong long power(long long b, long long e) {   // 빠른 거듭제곱\n    long long r = 1;\n    b %= MOD;\n    while (e > 0) {\n        if (e & 1) r = r * b % MOD;\n        b = b * b % MOD;\n        e >>= 1;\n    }\n    return r;\n}\n\nlong long nCr(int n, int r) {\n    if (r < 0 || r > n) return 0;              // 범위 밖 인덱스를 읽지 않게\n    return fact[n] * inv_fact[r] % MOD * inv_fact[n - r] % MOD;\n}\n\nint main() {\n    fact[0] = 1;\n    for (int i = 1; i <= N; i++) fact[i] = fact[i - 1] * i % MOD;   // long long 배열이라 넘치지 않아요\n    inv_fact[N] = power(fact[N], MOD - 2);                        // 페르마 소정리(MOD 가 소수)\n    for (int i = N; i >= 1; i--) inv_fact[i - 1] = inv_fact[i] * i % MOD;\n\n    cout << \"C(5, 2) = \" << nCr(5, 2) << '\\n';\n    cout << \"C(3, 5) = \" << nCr(3, 5) << '\\n';\n    cout << \"C(200000, 100000) % MOD = \" << nCr(200000, 100000) << '\\n';\n\n    long long a = nCr(10, 3), b = nCr(10, 4);\n    cout << \"C(10,3) - C(10,4) = \" << ((a - b) % MOD + MOD) % MOD << '\\n';   // 음수 나머지 보정\n    return 0;\n}\n",
+        "output": "C(5, 2) = 10\nC(3, 5) = 0\nC(200000, 100000) % MOD = 879467333\nC(10,3) - C(10,4) = 999999917\n"
+      },
+      {
+        "title": "파스칼 삼각형과 정확한 nCr",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // 파스칼 삼각형: MOD 가 소수가 아니어도, n 이 수천 이하일 때\n    const int M = 10;\n    vector<vector<int>> C(M + 1, vector<int>(M + 1, 0));\n    for (int n = 0; n <= M; n++) {\n        C[n][0] = 1;\n        for (int r = 1; r <= n; r++) C[n][r] = (C[n - 1][r - 1] + C[n - 1][r]) % 1000;\n    }\n    cout << \"C(10, r) % 1000 =\";\n    for (int r = 0; r <= M; r++) cout << ' ' << C[M][r];\n    cout << '\\n';\n\n    // 나머지 없이 정확한 값: 곱하고 바로 나누면 매 단계가 정수예요\n    auto exact = [](long long n, long long r) {\n        long long res = 1;\n        for (long long i = 1; i <= r; i++) res = res * (n - r + i) / i;\n        return res;\n    };\n    cout << \"격자 경로 \" << exact(3 + 4, 3) << '\\n';\n    cout << \"중복조합 \" << exact(7 + 3 - 1, 3 - 1) << '\\n';\n    cout << \"C(60, 30) \" << exact(60, 30) << '\\n';\n    return 0;\n}\n",
+        "output": "C(10, r) % 1000 = 1 10 45 120 210 252 210 120 45 10 1\n격자 경로 35\n중복조합 36\nC(60, 30) 118264581564861424\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "int f = 1;\nfor (int i = 1; i <= 20; i++) f = f * i % MOD;",
+        "right": "long long f = 1;\nfor (int i = 1; i <= 20; i++) f = f * i % MOD;",
+        "why": "int 끼리 곱하면 % 하기 전에 넘쳐요. 20! mod p 가 146326063 이어야 하는데 -238337185 가 나와요(정의되지 않은 동작)."
+      },
+      {
+        "wrong": "long long d = (nCr(10, 3) - nCr(10, 4)) % MOD;",
+        "right": "long long d = ((nCr(10, 3) - nCr(10, 4)) % MOD + MOD) % MOD;",
+        "why": "C++ 의 % 는 음수를 그대로 남겨 -90 이 돼요. MOD 를 더해 999999917 로 맞춰요. Python 은 처음부터 0 이상이에요."
+      },
+      {
+        "wrong": "long long c = fact[n] / (fact[r] * fact[n - r] % MOD);",
+        "right": "long long c = fact[n] * inv_fact[r] % MOD * inv_fact[n - r] % MOD;",
+        "why": "나머지를 취한 팩토리얼끼리는 나눌 수 없어요. 역원을 곱해야 하고, MOD 가 소수가 아니면 역원 대신 파스칼 삼각형을 써요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "n 이 작고(수천 이하) 질문이 몇 개뿐, 또는 MOD 가 소수가 아님",
+      "use": "파스칼 삼각형(Python 은 math.comb 도 가능)"
+    },
+    {
+      "situation": "n 이 10^5 ~ 10^6 이고 MOD 가 소수, 질문이 많음",
+      "use": "팩토리얼·역팩토리얼 전처리 + O(1) nCr"
+    },
+    {
+      "situation": "격자에서 오른쪽·아래로만 이동하는 경로 수",
+      "use": "C(가로 이동 + 세로 이동, 세로 이동)"
+    },
+    {
+      "situation": "격자가 크고 막힌 칸이 적음",
+      "use": "막힌 칸을 정렬해 '처음 밟는 경로 수'를 nCr 로 빼기(O(K²))"
+    },
+    {
+      "situation": "같은 물건을 여러 명에게 나누기",
+      "use": "중복조합 C(n + k - 1, k - 1)"
+    },
+    {
+      "situation": "답이 long long 안에 들어오고 정확한 값이 필요함",
+      "use": "곱하고 바로 나누는 정확한 nCr(Python 은 math.comb)"
+    }
+  ],
+  "checklist": [
+    "팩토리얼 표 크기가 필요한 최대 n(예: H + W)까지 되나요?",
+    "r < 0, r > n 을 0 으로 처리했나요?",
+    "곱할 때마다 % MOD 를 했나요? C++ 은 long long 인가요?",
+    "빼기 뒤 음수 나머지를 + MOD 로 보정했나요?",
+    "MOD 가 소수인가요? 아니면 역원 대신 파스칼 삼각형을 써요.",
+    "작은 입력에서 칸마다 세는 DP 결과와 같은지 확인했나요?"
+  ]
+}
