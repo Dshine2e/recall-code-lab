@@ -1,0 +1,176 @@
+{
+  "slug": "mst",
+  "title": "최소 신장 트리(크루스칼·프림)",
+  "category": "그래프",
+  "order": 7,
+  "summary": "모든 정점을 사이클 없이 가장 싸게 잇는 간선 묶음을 구해요. 간선이 적으면 크루스칼, 촘촘하면 프림이 편해요.",
+  "when": [
+    "모든 정점(도시·건물·기지국)을 최소 비용으로 이어야 할 때",
+    "간선 비용이 주어지고 어떤 간선을 고를지 정해야 할 때",
+    "모든 쌍 사이에 비용이 있는 촘촘한 그래프(점 사이 거리 등)에서 최소로 이을 때",
+    "'각자 설치' 같은 선택지를 가상 정점과 잇는 간선으로 바꿔 함께 고를 때"
+  ],
+  "topics": [
+    "최소 신장",
+    "프림"
+  ],
+  "python": {
+    "items": [
+      {
+        "name": "크루스칼",
+        "signature": "edges.sort()\nfor w, u, v in edges:\n    if find(u) != find(v): union(u, v); total += w",
+        "does": "간선을 비용 순으로 보며 서로 다른 묶음을 잇는 간선만 골라요. 묶음 판정은 유니온 파인드로 해요.",
+        "when": "간선 목록이 주어지고 간선 수가 정점 수와 비슷하거나 조금 많을 때 써요.",
+        "complexity": "O(E log E)"
+      },
+      {
+        "name": "프림 (힙)",
+        "signature": "heap = [(0, start)]\nw, v = heapq.heappop(heap)\nif visited[v]: continue",
+        "does": "트리에 붙일 수 있는 간선 중 가장 싼 것을 힙에서 꺼내 정점을 하나씩 붙여요. 이미 붙은 정점이 나오면 버려요.",
+        "when": "인접 리스트로 주어진 그래프에서 써요. heapq 는 최소 힙이라 비용을 튜플 앞에 둬요.",
+        "complexity": "O(E log E)"
+      },
+      {
+        "name": "프림 (배열)",
+        "signature": "dist = [INF] * n; dist[0] = 0\nv = min((i for i in range(n) if not used[i]), key=dist.__getitem__)",
+        "does": "정점마다 '지금 트리에 붙이는 가장 싼 비용'을 배열로 두고, 매번 최솟값 정점을 직접 찾아 붙인 뒤 나머지를 갱신해요.",
+        "when": "모든 쌍 사이에 간선이 있는 촘촘한 그래프에서 써요. 간선을 만들지 않고 그때그때 비용을 계산해요.",
+        "complexity": "O(V²)"
+      },
+      {
+        "name": "가상 정점",
+        "signature": "# 정점 0 을 '본부'로 두고 i-0 간선 비용 = 각자 설치 비용",
+        "does": "정점마다 따로 고를 수 있는 비용을 가상 정점과 잇는 간선으로 바꿔, 하나의 최소 신장 트리 문제로 만들어요.",
+        "when": "'직접 설치하거나 이웃과 잇거나' 처럼 두 가지 방법이 섞일 때 써요. 배열 프림이면 처음 dist 를 그 비용으로 두면 돼요.",
+        "complexity": "정점 1개, 간선 V개 추가"
+      }
+    ],
+    "examples": [
+      {
+        "title": "프림(힙): 인접 리스트로 최소 신장 트리 비용",
+        "code": "import heapq\nimport sys\n\ninput = sys.stdin.readline\n\nn, m = map(int, input().split())\nadj = [[] for _ in range(n + 1)]\nfor _ in range(m):\n    u, v, w = map(int, input().split())\n    adj[u].append((w, v))\n    adj[v].append((w, u))\n\nvisited = [False] * (n + 1)\nheap = [(0, 1)]                          # (붙이는 비용, 정점): 1번에서 시작\ntotal = 0\ncount = 0\nwhile heap:\n    w, v = heapq.heappop(heap)           # 가장 싸게 붙일 수 있는 정점\n    if visited[v]:\n        continue                         # 이미 트리에 들어간 정점은 건너뛰기\n    visited[v] = True\n    total += w\n    count += 1\n    for nw, nv in adj[v]:\n        if not visited[nv]:\n            heapq.heappush(heap, (nw, nv))\n\nprint(total if count == n else '연결되지 않음')\n",
+        "stdin": "5 7\n1 2 3\n1 3 1\n2 3 7\n2 4 5\n3 4 2\n4 5 4\n3 5 6\n",
+        "output": "10\n"
+      },
+      {
+        "title": "프림(배열): 점 사이 거리 제곱이 비용인 촘촘한 그래프",
+        "code": "pts = [(0, 0), (2, 0), (2, 3), (5, 1), (6, 4)]\nn = len(pts)\nINF = float('inf')\ndist = [INF] * n                          # 지금 트리에 붙이는 가장 싼 비용\ndist[0] = 0\nused = [False] * n\ntotal = 0\nfor _ in range(n):\n    v = -1\n    for i in range(n):                    # 아직 안 붙은 정점 중 최솟값 찾기: O(N)\n        if not used[i] and (v == -1 or dist[i] < dist[v]):\n            v = i\n    used[v] = True\n    total += dist[v]\n    for i in range(n):                    # 새 정점 기준으로 비용 갱신: O(N)\n        if not used[i]:\n            dx, dy = pts[i][0] - pts[v][0], pts[i][1] - pts[v][1]\n            dist[i] = min(dist[i], dx * dx + dy * dy)\nprint(total)\n",
+        "output": "33\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "w, v = heapq.heappop(heap)\nvisited[v] = True   # 이미 방문했는지 확인 없이",
+        "right": "w, v = heapq.heappop(heap)\nif visited[v]:\n    continue\nvisited[v] = True",
+        "why": "한 정점이 여러 간선으로 힙에 여러 번 들어가요. 꺼낼 때 확인하지 않으면 같은 정점을 또 붙여 비용이 더해져요. 위 예제에서 확인을 빼면 개수가 N을 넘어 '연결되지 않음'이 나와요."
+      },
+      {
+        "wrong": "dist = [0] * n",
+        "right": "dist = [INF] * n\ndist[0] = 0",
+        "why": "처음 비용을 0으로 두면 모든 정점이 공짜로 붙는 것처럼 보여 답이 0이 돼요. 시작 정점만 0이고 나머지는 무한대(또는 가상 정점 비용)로 시작해요."
+      },
+      {
+        "wrong": "edges = [(i, j, d(i, j)) for i in range(n) for j in range(i)]  # n = 3000\nedges.sort(key=lambda e: e[2])",
+        "right": "배열 프림으로 dist 만 갱신하기",
+        "why": "정점 3000개면 간선이 약 450만 개예요. Python 에서 튜플을 이만큼 만들고 정렬하면 시간도 메모리도 많이 들어요. 촘촘한 그래프는 O(V²) 배열 프림이 알맞아요."
+      },
+      {
+        "wrong": "print(total)  # 연결 여부 확인 없이",
+        "right": "print(total if count == n else '연결되지 않음')",
+        "why": "그래프가 끊겨 있으면 프림은 시작 정점의 묶음만 잇고 끝나요. 붙인 정점 수(크루스칼이면 고른 간선이 n-1개인지)를 꼭 확인해요."
+      }
+    ]
+  },
+  "cpp": {
+    "items": [
+      {
+        "name": "크루스칼",
+        "signature": "sort(edges.begin(), edges.end());\nfor (auto [w, u, v] : edges)\n    if (unite(u, v)) total += w;",
+        "does": "tuple<int,int,int> 을 비용이 맨 앞에 오게 넣으면 sort 한 번으로 비용 순이 돼요. 유니온 파인드로 사이클을 막아요.",
+        "when": "간선 목록이 주어지는 보통의 그래프에서 써요.",
+        "complexity": "O(E log E)"
+      },
+      {
+        "name": "프림 (힙)",
+        "signature": "priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> pq;",
+        "does": "가장 싼 간선부터 꺼내 정점을 하나씩 붙여요. priority_queue 는 기본이 최대 힙이라 greater 를 줘야 해요.",
+        "when": "인접 리스트 그래프에서 써요. 꺼낸 정점이 이미 붙었으면 continue 해요.",
+        "complexity": "O(E log E)"
+      },
+      {
+        "name": "프림 (배열)",
+        "signature": "vector<long long> dist(n, LLONG_MAX); dist[0] = 0;\nvector<bool> used(n, false);",
+        "does": "정점마다 트리에 붙이는 최소 비용을 배열에 두고, 매번 최솟값 정점을 찾아 붙인 뒤 나머지를 갱신해요.",
+        "when": "모든 쌍에 간선이 있는 촘촘한 그래프에서 간선을 만들지 않고 써요.",
+        "complexity": "O(V²)"
+      },
+      {
+        "name": "비용 합의 자료형",
+        "signature": "long long total = 0;",
+        "does": "간선 비용이 int 여도 V-1개를 더하면 int 범위를 넘을 수 있어요.",
+        "when": "비용 최댓값 × (V-1) 이 2^31 - 1 을 넘을 수 있으면 합은 long long 으로 둬요.",
+        "complexity": "O(1)"
+      }
+    ],
+    "examples": [
+      {
+        "title": "프림(힙): 인접 리스트로 최소 신장 트리 비용",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    int n, m;\n    cin >> n >> m;\n    vector<vector<pair<int, int>>> adj(n + 1);   // (비용, 정점)\n    for (int i = 0; i < m; i++) {\n        int u, v, w;\n        cin >> u >> v >> w;\n        adj[u].push_back({w, v});\n        adj[v].push_back({w, u});\n    }\n    // greater 를 줘야 가장 싼 간선이 top 에 와요 (기본은 최대 힙)\n    priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;\n    vector<bool> visited(n + 1, false);\n    pq.push({0, 1});\n    long long total = 0;\n    int cnt = 0;\n    while (!pq.empty()) {\n        auto [w, v] = pq.top();\n        pq.pop();\n        if (visited[v]) continue;\n        visited[v] = true;\n        total += w;\n        cnt++;\n        for (auto [nw, nv] : adj[v])\n            if (!visited[nv]) pq.push({nw, nv});\n    }\n    if (cnt == n) cout << total << \"\\n\";\n    else cout << \"연결되지 않음\\n\";\n    return 0;\n}\n",
+        "stdin": "5 7\n1 2 3\n1 3 1\n2 3 7\n2 4 5\n3 4 2\n4 5 4\n3 5 6\n",
+        "output": "10\n"
+      },
+      {
+        "title": "프림(배열): 점 사이 거리 제곱이 비용인 촘촘한 그래프",
+        "code": "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    vector<pair<long long, long long>> pts = {{0, 0}, {2, 0}, {2, 3}, {5, 1}, {6, 4}};\n    int n = pts.size();\n    const long long INF = LLONG_MAX;\n    vector<long long> dist(n, INF);   // 지금 트리에 붙이는 가장 싼 비용\n    vector<bool> used(n, false);\n    dist[0] = 0;\n    long long total = 0;\n    for (int step = 0; step < n; step++) {\n        int v = -1;\n        for (int i = 0; i < n; i++)   // 최솟값 찾기 O(N)\n            if (!used[i] && (v == -1 || dist[i] < dist[v])) v = i;\n        used[v] = true;\n        total += dist[v];\n        for (int i = 0; i < n; i++) { // 새 정점 기준으로 갱신 O(N)\n            if (used[i]) continue;\n            long long dx = pts[i].first - pts[v].first, dy = pts[i].second - pts[v].second;\n            dist[i] = min(dist[i], dx * dx + dy * dy);\n        }\n    }\n    cout << total << \"\\n\";\n    return 0;\n}\n",
+        "output": "33\n"
+      }
+    ],
+    "pitfalls": [
+      {
+        "wrong": "priority_queue<pair<int, int>> pq;",
+        "right": "priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;",
+        "why": "C++ priority_queue 는 최대 힙이라 가장 비싼 간선부터 꺼내요. 위 예제를 이렇게 바꾸면 10 대신 21이 나와요. Python heapq 는 반대로 최소 힙이에요."
+      },
+      {
+        "wrong": "int total = 0;",
+        "right": "long long total = 0;",
+        "why": "간선 하나는 int 에 들어가도 합은 넘칠 수 있어요. 오버플로는 오류 없이 엉뚱한 값을 내요."
+      },
+      {
+        "wrong": "auto [w, v] = pq.top(); pq.pop();\nvisited[v] = true;",
+        "right": "auto [w, v] = pq.top(); pq.pop();\nif (visited[v]) continue;\nvisited[v] = true;",
+        "why": "같은 정점이 큐에 여러 번 들어가므로, 꺼낼 때 이미 붙은 정점은 버려야 비용이 두 번 더해지지 않아요."
+      }
+    ]
+  },
+  "decision": [
+    {
+      "situation": "간선 목록이 주어지고 간선이 많지 않을 때",
+      "use": "크루스칼(정렬 + 유니온 파인드)"
+    },
+    {
+      "situation": "인접 리스트로 주어지고 한 정점에서 넓혀 가기 편할 때",
+      "use": "힙을 쓰는 프림"
+    },
+    {
+      "situation": "모든 쌍 사이에 비용이 있는 촘촘한 그래프일 때(점 사이 거리 등)",
+      "use": "배열로 하는 O(V²) 프림"
+    },
+    {
+      "situation": "정점마다 '따로 설치' 비용이 있을 때",
+      "use": "가상 정점 하나를 더하고 그 비용을 간선으로 넣기"
+    },
+    {
+      "situation": "두 정점 사이 가장 짧은 경로가 필요할 때",
+      "use": "최소 신장 트리가 아니라 다익스트라 같은 최단 경로"
+    }
+  ],
+  "checklist": [
+    "간선 수와 정점 수를 보고 크루스칼·힙 프림·배열 프림 중 하나를 골랐나요?",
+    "C++ priority_queue 에 greater 를 줘서 최소 힙으로 만들었나요?",
+    "프림에서 꺼낸 정점이 이미 붙었는지 확인하나요?",
+    "배열 프림의 처음 비용을 시작 정점만 0, 나머지는 무한대(또는 설치 비용)로 두었나요?",
+    "그래프가 끊겼을 때를 확인했나요(붙인 정점 수, 고른 간선 n-1개)?",
+    "비용 합을 long long 으로 다루나요?"
+  ]
+}
